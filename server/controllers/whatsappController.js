@@ -3,40 +3,44 @@ const FormData = require('form-data');
 const { Job, Customer } = require('../models/Schemas');
 
 class WhatsAppController {
-  constructor() {
-    // WhatsApp API credentials
-    this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    this.businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
-    this.apiVersion = process.env.WHATSAPP_API_VERSION || 'v18.0';
-    this.templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'new_repair_job_intakee';
-    
-    console.log('WhatsApp Controller Initialized:');
-    console.log('- Phone Number ID:', this.phoneNumberId ? 'Set' : 'Not Set');
-    console.log('- Access Token:', this.accessToken ? 'Set (length: ' + this.accessToken.length + ')' : 'Not Set');
-    console.log('- Template Name:', this.templateName);
-    console.log('- API Version:', this.apiVersion);
-    
-    if (this.accessToken && this.phoneNumberId) {
-      this.baseUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}/messages`;
-      this.mediaUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}/media`;
-      console.log('- Base URL:', this.baseUrl);
-    }
-    
-    // Bind all methods
-    this.formatPhoneNumber = this.formatPhoneNumber.bind(this);
-    this.uploadMedia = this.uploadMedia.bind(this);
-    this.sendTemplateWithDocument = this.sendTemplateWithDocument.bind(this);
-    this.sendTextMessageInternal = this.sendTextMessageInternal.bind(this);
-    this.sendJobIntakeWithMedia = this.sendJobIntakeWithMedia.bind(this);
-    this.sendJobIntakeNotification = this.sendJobIntakeNotification.bind(this);
-    this.testWhatsAppCredentials = this.testWhatsAppCredentials.bind(this);
-    this.sendTextMessage = this.sendTextMessage.bind(this);
-    this.handleButtonClick = this.handleButtonClick.bind(this);
-    this.sendDeviceVideo = this.sendDeviceVideo.bind(this);
-    this.sendJobCompletionNotification = this.sendJobCompletionNotification.bind(this);
-    this.getMessageStatus = this.getMessageStatus.bind(this);
+
+constructor() {
+  // WhatsApp API credentials
+  this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  this.businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+  this.apiVersion = process.env.WHATSAPP_API_VERSION || 'v18.0';
+  this.templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'new_repair_job_intakee';
+  
+  console.log('WhatsApp Controller Initialized:');
+  console.log('- Phone Number ID:', this.phoneNumberId ? 'Set' : 'Not Set');
+  console.log('- Access Token:', this.accessToken ? 'Set (length: ' + this.accessToken.length + ')' : 'Not Set');
+  console.log('- Template Name:', this.templateName);
+  console.log('- API Version:', this.apiVersion);
+  
+  if (this.accessToken && this.phoneNumberId) {
+    this.baseUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}/messages`;
+    this.mediaUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}/media`;
+    console.log('- Base URL:', this.baseUrl);
   }
+  
+  // ✅ ADD sendDeviceVideo HERE
+  // Bind all methods
+  this.formatPhoneNumber = this.formatPhoneNumber.bind(this);
+  this.uploadMedia = this.uploadMedia.bind(this);
+  this.sendTemplateWithDocument = this.sendTemplateWithDocument.bind(this);
+  this.sendTextMessageInternal = this.sendTextMessageInternal.bind(this);
+  this.sendJobIntakeWithMedia = this.sendJobIntakeWithMedia.bind(this);
+  this.sendJobIntakeNotification = this.sendJobIntakeNotification.bind(this);
+  this.testWhatsAppCredentials = this.testWhatsAppCredentials.bind(this);
+  this.sendTextMessage = this.sendTextMessage.bind(this);
+  this.sendShopVideoToCustomer = this.sendShopVideoToCustomer.bind(this);
+  this.sendJobCompletionNotification = this.sendJobCompletionNotification.bind(this);
+  this.getMessageStatus = this.getMessageStatus.bind(this);
+  
+  // ✅ ADD THIS LINE
+  this.sendDeviceVideo = this.sendDeviceVideo.bind(this);
+}
 
   // Helper: Format phone number for WhatsApp
   formatPhoneNumber(phone) {
@@ -61,60 +65,242 @@ class WhatsAppController {
     return cleaned;
   }
 
-  // Upload media to WhatsApp servers
-  async uploadMedia(fileBuffer, mimeType, filename) {
+// In WhatsAppController class, ensure this function exists:
+async uploadMedia(fileBuffer, mimeType, filename) {
+  try {
+    console.log(`Uploading media: ${filename}, Size: ${(fileBuffer.length / 1024).toFixed(2)}KB, Type: ${mimeType}`);
+    
+    if (!fileBuffer || fileBuffer.length === 0) {
+      throw new Error('File buffer is empty');
+    }
+    
+    // Check file size limits
+    const maxSize = mimeType.startsWith('video/') ? 16 * 1024 * 1024 : 5 * 1024 * 1024;
+    
+    if (fileBuffer.length > maxSize) {
+      throw new Error(`File too large: ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB (max: ${(maxSize / 1024 / 1024).toFixed(2)}MB)`);
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileBuffer, {
+      filename: filename,
+      contentType: mimeType
+    });
+    formData.append('messaging_product', 'whatsapp');
+    formData.append('type', mimeType);
+
+    console.log(`Making POST request to: ${this.mediaUrl}`);
+    
+    const response = await axios.post(
+      this.mediaUrl,
+      formData,
+      {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          ...formData.getHeaders()
+        },
+        timeout: 30000,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+      }
+    );
+
+    console.log('✓ Media uploaded successfully, ID:', response.data.id);
+    return response.data.id;
+  } catch (error) {
+    const errorMessage = error.response?.data?.error?.message || error.message;
+    const errorCode = error.response?.data?.error?.code;
+    console.error('✗ Error uploading media:', {
+      message: errorMessage,
+      code: errorCode,
+      status: error.response?.status
+    });
+    throw new Error(`Upload failed: ${errorMessage} (Code: ${errorCode})`);
+  }
+}
+  // Send shop video to customer
+  async sendShopVideoToCustomer(req, res) {
     try {
-      console.log(`Uploading media: ${filename}, Size: ${(fileBuffer.length / 1024).toFixed(2)}KB, Type: ${mimeType}`);
+      const { video, customerPhone, customerName, deviceModel, deviceIssue } = req.body;
       
-      if (!fileBuffer || fileBuffer.length === 0) {
-        throw new Error('File buffer is empty');
+      console.log('\n' + '='.repeat(60));
+      console.log('📤 SENDING SHOP VIDEO TO CUSTOMER');
+      console.log('='.repeat(60));
+      console.log('- Customer:', customerName);
+      console.log('- Phone:', customerPhone);
+      console.log('- Device:', deviceModel);
+      console.log('- Issue:', deviceIssue);
+      console.log('- Video present:', !!video);
+      console.log('- Video size:', video ? `${(Buffer.from(video, 'base64').length / 1024 / 1024).toFixed(2)}MB` : 'N/A');
+      
+      if (!video || !customerPhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'Video and customer phone number are required'
+        });
       }
       
-      // Check file size limits
-      const maxSize = mimeType.startsWith('video/') ? 16 * 1024 * 1024 : 5 * 1024 * 1024;
-      
-      if (fileBuffer.length > maxSize) {
-        throw new Error(`File too large: ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB (max: ${(maxSize / 1024 / 1024).toFixed(2)}MB)`);
+      // Format phone number
+      const formattedPhone = this.formatPhoneNumber(customerPhone);
+      if (!formattedPhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid phone number format'
+        });
       }
-
-      const formData = new FormData();
-      formData.append('file', fileBuffer, {
-        filename: filename,
-        contentType: mimeType
-      });
-      formData.append('messaging_product', 'whatsapp');
-      formData.append('type', mimeType);
-
-      console.log(`Making POST request to: ${this.mediaUrl}`);
       
-      const response = await axios.post(
-        this.mediaUrl,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
-            ...formData.getHeaders()
+      // Check WhatsApp credentials
+      if (!this.accessToken || !this.phoneNumberId) {
+        return res.status(400).json({
+          success: false,
+          message: 'WhatsApp API not configured'
+        });
+      }
+      
+      // Convert base64 to buffer
+      const videoBuffer = Buffer.from(video, 'base64');
+      const videoSizeMB = (videoBuffer.length / 1024 / 1024).toFixed(2);
+      console.log(`📊 Video buffer size: ${videoSizeMB}MB`);
+      
+      // Check video size
+      if (videoBuffer.length > 16 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: `Video too large (${videoSizeMB}MB). WhatsApp maximum is 16MB.`
+        });
+      }
+      
+      let videoMediaId = null;
+      let videoSent = false;
+      
+      try {
+        // Step 1: Upload video to WhatsApp
+        console.log('📤 Step 1: Uploading video to WhatsApp...');
+        videoMediaId = await this.uploadMedia(
+          videoBuffer,
+          'video/mp4',
+          `Device_Condition_${Date.now()}.mp4`
+        );
+        
+        console.log('✅ Video uploaded, Media ID:', videoMediaId);
+        
+        // Step 2: Send intro message
+        console.log('💬 Step 2: Sending intro message...');
+        const introMessage = `🔧 *Device Inspection Update*\n\nHello ${customerName},\n\nWe have recorded a video showing the current condition of your device for your reference:\n\n📱 *Device:* ${deviceModel || 'Not specified'}\n🔧 *Issue:* ${deviceIssue || 'Not specified'}`;
+        
+        await this.sendTextMessageInternal(formattedPhone, introMessage);
+        console.log('✅ Intro message sent');
+        
+        // Step 3: Send the video
+        console.log('🎥 Step 3: Sending video...');
+        const videoCaption = `📹 *Device Condition Video*\n\nDevice: ${deviceModel || 'Not specified'}\nIssue: ${deviceIssue || 'Not specified'}\n\nThis video shows the current condition as recorded by our technician.`;
+        
+        await axios.post(
+          this.baseUrl,
+          {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: formattedPhone,
+            type: 'video',
+            video: {
+              id: videoMediaId,
+              caption: videoCaption.substring(0, 1024)
+            }
           },
-          timeout: 30000,
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity
+          {
+            headers: {
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 15000
+          }
+        );
+        
+        videoSent = true;
+        console.log('✅ Video sent to customer');
+        
+        // Step 4: Send follow-up message
+        console.log('📋 Step 4: Sending follow-up message...');
+        const followUpMessage = `📋 *Next Steps:*\n\n1. Review the device condition in the video\n2. We'll proceed with repair as discussed\n3. You'll receive updates on repair progress\n4. Contact us if you have any questions\n\n📍 *Shop Address:* Sri Ramanar Mobile Service Center\n1E, Kattabomman Street, Tiruvannamalai - 606601\n📞 *Phone:* 94430 19097\n⏰ *Hours:* 9AM - 9:30PM (Closed Tuesday)\n\nThank you for choosing our service! 🙏`;
+        
+        await this.sendTextMessageInternal(formattedPhone, followUpMessage);
+        console.log('✅ Follow-up message sent');
+        
+        // Step 5: Try to find and update job in database
+        try {
+          // Find customer by phone
+          const customer = await Customer.findOne({ phone: customerPhone });
+          if (customer) {
+            // Find latest job for this customer
+            const job = await Job.findOne({
+              customer: customer._id
+            }).sort({ createdAt: -1 });
+            
+            if (job) {
+              job.shop_video_sent = new Date();
+              job.shop_video_sent_to_customer = true;
+              job.shop_video_size = videoBuffer.length;
+              await job.save();
+              console.log('✅ Job updated with video sent info');
+            }
+          }
+        } catch (dbError) {
+          console.error('⚠️ Error updating job:', dbError.message);
+          // Non-critical error, continue
         }
-      );
-
-      console.log('✓ Media uploaded successfully, ID:', response.data.id);
-      return response.data.id;
+        
+        console.log('\n' + '='.repeat(60));
+        console.log('✅ VIDEO SENT SUCCESSFULLY!');
+        console.log('='.repeat(60));
+        console.log(`Customer: ${customerName}`);
+        console.log(`Phone: ${customerPhone}`);
+        console.log(`Video size: ${videoSizeMB}MB`);
+        console.log('='.repeat(60));
+        
+        res.json({
+          success: true,
+          message: 'Device video sent to customer successfully',
+          customerName,
+          customerPhone,
+          deviceModel,
+          videoSize: `${videoSizeMB}MB`,
+          videoSent: true,
+          timestamp: new Date().toISOString()
+        });
+        
+      } catch (error) {
+        console.error('\n❌ Error sending video:', error.message);
+        
+        // If video upload succeeded but sending failed, send error message
+        if (videoMediaId && !videoSent) {
+          try {
+            const errorMessage = `⚠️ *Video Upload Issue*\n\nWe recorded a video but encountered an issue sending it. Please visit our shop to see the video.\n\nDevice: ${deviceModel}\nIssue: ${deviceIssue}\n\nThank you!`;
+            await this.sendTextMessageInternal(formattedPhone, errorMessage);
+          } catch (sendError) {
+            console.error('Failed to send error message:', sendError.message);
+          }
+        }
+        
+        res.status(500).json({
+          success: false,
+          message: 'Failed to send device video',
+          error: error.response?.data?.error?.message || error.message,
+          videoSize: `${videoSizeMB}MB`,
+          videoSent: false
+        });
+      }
+      
     } catch (error) {
-      const errorMessage = error.response?.data?.error?.message || error.message;
-      const errorCode = error.response?.data?.error?.code;
-      console.error('✗ Error uploading media:', {
-        message: errorMessage,
-        code: errorCode,
-        status: error.response?.status
+      console.error('❌ Error in sendShopVideoToCustomer:', error.message);
+      console.error('Stack:', error.stack);
+      
+      res.status(500).json({
+        success: false,
+        message: 'Unexpected error sending video',
+        error: error.message
       });
-      throw new Error(`Upload failed: ${errorMessage} (Code: ${errorCode})`);
     }
   }
-
   // Send template with document header
   async sendTemplateWithDocument(phoneNumber, pdfMediaId, jobData) {
     try {
@@ -150,7 +336,7 @@ class WhatsAppController {
                 { type: "text", text: jobData.deviceModel.substring(0, 30) },
                 { type: "text", text: jobData.issue.substring(0, 30) },
                 { type: "text", text: jobData.estimatedDate.substring(0, 20) },
-                { type: "text", text: `₹${jobData.totalAmount.toFixed(2)}` }
+                { type: "text", text: `${jobData.totalAmount.toFixed(2)}` }
               ]
             },
             {
@@ -919,132 +1105,626 @@ Thank you!`;
     }
   }
 
-  // Send device video
-  async sendDeviceVideo(req, res) {
-    const startTime = Date.now();
+async sendDeviceVideo(req, res) {
+  const startTime = Date.now();
+  
+  try {
+    const { jobId } = req.params;
+    const { phoneNumber } = req.query;
+    
+    console.log(`\n🎥 Sending device video for job: ${jobId}`);
+    
+    // Get job details
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+    
+    const jobCardNumber = job.job_card_number || job._id.toString().slice(-6);
+    const deviceModel = `${job.device_brand || ''} ${job.device_model}`.trim();
+    const customerName = job.customer?.name || 'Customer';
+    
+    // Get video file
+    let videoFile = req.file;
+    if (!videoFile && req.files?.video) {
+      videoFile = Array.isArray(req.files.video) ? req.files.video[0] : req.files.video;
+    }
+    
+    if (!videoFile || !videoFile.buffer || videoFile.size === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid video file found'
+      });
+    }
+    
+    console.log(`✅ Video file: ${videoFile.originalname}, Size: ${(videoFile.size / 1024 / 1024).toFixed(2)}MB`);
+    
+    // ✅ SOLUTION 1: Log video format info
+    console.log('🎬 Video format debug:', {
+      size: videoFile.size,
+      mimetype: videoFile.mimetype,
+      firstBytes: videoFile.buffer.slice(0, 20).toString('hex'),
+      isMP4: videoFile.mimetype?.includes('mp4'),
+      isWebM: videoFile.mimetype?.includes('webm')
+    });
+    
+    // Format phone number
+    const formattedPhone = this.formatPhoneNumber(phoneNumber);
+    console.log(`📱 Sending to: ${formattedPhone} (original: ${phoneNumber})`);
+    
+    if (!formattedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number'
+      });
+    }
+    
+    let videoSent = false;
+    let videoError = null;
+    let videoMediaId = null;
+    let whatsappResponse = null;
+    let sendMethod = 'video'; // Default to sending as video
     
     try {
-      const { jobId } = req.params;
-      const { phoneNumber } = req.query;
-      const videoFile = req.files?.video?.[0];
+      // 1. Upload video to WhatsApp media server
+      console.log('📤 Step 1: Uploading video to WhatsApp...');
       
-      console.log(`\n🎥 Sending device video for job: ${jobId}`);
-      
-      if (!videoFile || !videoFile.buffer || videoFile.size === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Video file is required'
-        });
+      // ✅ Check if video is too large
+      if (videoFile.size > 16 * 1024 * 1024) {
+        console.log('⚠️ Video is large, trying to compress...');
+        // Note: In production, you'd want to compress the video here
+        // For now, we'll just continue with the original
       }
       
-      if (!phoneNumber) {
-        return res.status(400).json({
-          success: false,
-          message: 'Phone number is required'
-        });
-      }
+      videoMediaId = await this.uploadMedia(
+        videoFile.buffer,
+        videoFile.mimetype || 'video/mp4',
+        `Device_Video_${jobCardNumber}.mp4`
+      );
       
-      const job = await Job.findById(jobId);
+      console.log(`✅ Video uploaded! Media ID: ${videoMediaId}`);
       
-      if (!job) {
-        return res.status(404).json({
-          success: false,
-          message: 'Job not found'
-        });
-      }
+      // ✅ SOLUTION 2: Try sending as DOCUMENT first (more reliable)
+      console.log('\n📨 Step 2: Trying to send as DOCUMENT (more reliable)...');
       
-      const jobCardNumber = job.job_card_number || job._id.toString().slice(-6);
-      const deviceModel = `${job.device_brand || ''} ${job.device_model}`.trim();
+      const documentMessage = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: formattedPhone,
+        type: 'document',
+        document: {
+          id: videoMediaId,
+          filename: `Device_Video_${jobCardNumber}.mp4`,
+          caption: `📱 Device Condition Video\n\nJob ID: ${jobCardNumber}\nDevice: ${deviceModel}\nCustomer: ${customerName}`
+        }
+      };
       
-      console.log(`Video size: ${(videoFile.size / 1024 / 1024).toFixed(2)}MB`);
-      
-      if (!this.accessToken || !this.phoneNumberId) {
-        return res.status(500).json({
-          success: false,
-          message: 'WhatsApp API not configured'
-        });
-      }
-      
-      let videoSent = false;
-      let videoError = null;
+      console.log('Document message payload:', JSON.stringify(documentMessage, null, 2));
       
       try {
-        if (videoFile.size > 16 * 1024 * 1024) {
-          throw new Error(`Video too large: ${(videoFile.size / 1024 / 1024).toFixed(2)}MB. Max 16MB.`);
-        }
-        
-        let mimeType = videoFile.mimetype || 'video/mp4';
-        if (!mimeType.startsWith('video/')) {
-          mimeType = 'video/mp4';
-        }
-        
-        const videoMediaId = await this.uploadMedia(
-          videoFile.buffer,
-          mimeType,
-          `Device_Video_${jobCardNumber}.mp4`
+        // First try: Send as document
+        whatsappResponse = await axios.post(
+          this.baseUrl,
+          documentMessage,
+          {
+            headers: {
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 20000
+          }
         );
         
-        // Send video message
-        const response = await axios.post(
+        sendMethod = 'document';
+        console.log('✅ Document sent successfully!');
+        
+      } catch (documentError) {
+        console.log('❌ Document send failed, trying as VIDEO...');
+        
+        // Fallback: Try sending as video
+        const videoMessage = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: formattedPhone,
+          type: 'video',
+          video: {
+            id: videoMediaId,
+            caption: `📱 Device Condition Video\n\nJob ID: ${jobCardNumber}\nDevice: ${deviceModel}\nCustomer: ${customerName}`
+          }
+        };
+        
+        console.log('Video message payload:', JSON.stringify(videoMessage, null, 2));
+        
+        whatsappResponse = await axios.post(
+          this.baseUrl,
+          videoMessage,
+          {
+            headers: {
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 20000
+          }
+        );
+        
+        sendMethod = 'video';
+        console.log('✅ Video sent successfully!');
+      }
+      
+      // ✅ SOLUTION 3: Check WhatsApp API response
+      console.log('📊 WhatsApp API Response:', JSON.stringify(whatsappResponse.data, null, 2));
+      
+      if (whatsappResponse.data.messages && whatsappResponse.data.messages[0].id) {
+        console.log(`✅ ${sendMethod.toUpperCase()} message accepted by WhatsApp`);
+        console.log(`Message ID: ${whatsappResponse.data.messages[0].id}`);
+        
+        videoSent = true;
+        
+        // Check message status after delay
+        setTimeout(async () => {
+          try {
+            const messageId = whatsappResponse.data.messages[0].id;
+            const statusUrl = `https://graph.facebook.com/${this.apiVersion}/${messageId}`;
+            
+            const statusResponse = await axios.get(statusUrl, {
+              headers: {
+                'Authorization': `Bearer ${this.accessToken}`
+              }
+            });
+            
+            console.log('📊 Message delivery status:', JSON.stringify(statusResponse.data, null, 2));
+            
+            // Update job with delivery status
+            job.device_video_delivery_status = statusResponse.data;
+            await job.save();
+            
+          } catch (statusError) {
+            console.error('⚠️ Error checking delivery status:', statusError.message);
+          }
+        }, 3000);
+        
+      } else {
+        videoError = 'WhatsApp did not return a message ID';
+        console.error('❌', videoError);
+      }
+      
+      // 3. Send confirmation text with instructions
+      console.log('\n💬 Step 3: Sending confirmation message with instructions...');
+      try {
+        let confirmMessage = '';
+        
+        if (sendMethod === 'document') {
+          confirmMessage = `✅ *Device Video Recorded & Sent*\n\nHello ${customerName},\n\nWe have recorded a video of your device condition.\n\n📋 *Job ID:* ${jobCardNumber}\n📱 *Device:* ${deviceModel}\n📎 *Video:* Sent as a document file\n\n*To view:*\n1. Open this chat\n2. Tap on "📎 Documents"\n3. Find "Device_Video_${jobCardNumber}.mp4"\n4. Download and play\n\nThank you! 🙏`;
+        } else {
+          confirmMessage = `✅ *Device Video Recorded & Sent*\n\nHello ${customerName},\n\nWe have recorded a video of your device condition.\n\n📋 *Job ID:* ${jobCardNumber}\n📱 *Device:* ${deviceModel}\n🎥 *Video:* Sent above this message\n\n*If video not visible:*\n1. Check "Media" tab in chat\n2. Ensure auto-download is enabled\n3. Restart WhatsApp if needed\n\nThank you! 🙏`;
+        }
+        
+        await this.sendTextMessageInternal(formattedPhone, confirmMessage);
+        console.log('✅ Confirmation message sent with viewing instructions');
+        
+      } catch (textError) {
+        console.log('⚠️ Text confirmation failed, but video was sent');
+      }
+      
+      // 4. Send troubleshooting tips if video sent as document
+      if (sendMethod === 'document') {
+        try {
+          setTimeout(async () => {
+            const tipsMessage = `💡 *Video Viewing Tips:*\n\nIf you can't see the video:\n\n1. *Check Documents tab:* Look for "📎 Documents" in chat\n2. *File name:* Device_Video_${jobCardNumber}.mp4\n3. *File size:* ${(videoFile.size / 1024 / 1024).toFixed(2)}MB\n4. *Need help?* Reply "HELP" or call 94430 19097`;
+            
+            await this.sendTextMessageInternal(formattedPhone, tipsMessage);
+            console.log('✅ Troubleshooting tips sent');
+          }, 2000);
+        } catch (tipsError) {
+          console.log('⚠️ Tips message failed');
+        }
+      }
+      
+    } catch (error) {
+      videoError = error.message;
+      console.error('❌ Error in video process:', videoError);
+      
+      if (error.response) {
+        console.error('❌ Error response:', JSON.stringify(error.response.data, null, 2));
+        console.error('❌ Error status:', error.response.status);
+        
+        // Try to send error message to customer
+        try {
+          const errorMsg = `⚠️ *Video Sending Issue*\n\nWe recorded your device video but encountered an issue.\n\n📋 Job ID: ${jobCardNumber}\n📱 Device: ${deviceModel}\n\nPlease visit our shop to view the video:\n📍 Sri Ramanar Mobile Service Center\n1E, Kattabomman Street, Tiruvannamalai\n📞 94430 19097\n\nThank you!`;
+          
+          await this.sendTextMessageInternal(formattedPhone, errorMsg);
+        } catch (sendError) {
+          console.error('Failed to send error message:', sendError);
+        }
+      }
+    }
+    
+    // Update job
+    job.device_video_received = videoSent;
+    job.device_video_received_at = new Date();
+    job.device_video_sent_to_whatsapp = videoSent;
+    job.device_video_send_method = sendMethod;
+    job.device_video_whatsapp_id = videoMediaId;
+    job.device_video_error = videoError;
+    job.device_video_whatsapp_response = whatsappResponse?.data;
+    await job.save();
+    
+    const totalTime = Date.now() - startTime;
+    
+    // Prepare response
+    const responseData = {
+      success: videoSent,
+      message: videoSent 
+        ? `Device video sent as ${sendMethod.toUpperCase()} successfully!`
+        : `Video upload succeeded but sending failed: ${videoError}`,
+      jobId: job._id,
+      jobCardNumber,
+      customerPhone: phoneNumber,
+      videoSent,
+      videoSize: `${(videoFile.size / 1024 / 1024).toFixed(2)}MB`,
+      videoMediaId: videoMediaId,
+      sendMethod: sendMethod,
+      whatsappMessageId: whatsappResponse?.data?.messages?.[0]?.id,
+      processingTime: `${totalTime}ms`,
+      customerInstructions: videoSent ? {
+        asDocument: sendMethod === 'document',
+        filename: `Device_Video_${jobCardNumber}.mp4`,
+        viewInDocuments: sendMethod === 'document',
+        viewInMedia: sendMethod === 'video'
+      } : null
+    };
+    
+    if (videoSent) {
+      res.json(responseData);
+    } else {
+      res.status(500).json(responseData);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in sendDeviceVideo:', error);
+    console.error('Error stack:', error.stack);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process device video',
+      error: error.message,
+      processingTime: `${Date.now() - startTime}ms`
+    });
+  }
+}
+
+
+  async handleWebhook(req, res) {
+  try {
+    // Verify webhook (for initial setup)
+    if (req.method === 'GET') {
+      const mode = req.query['hub.mode'];
+      const token = req.query['hub.verify_token'];
+      const challenge = req.query['hub.challenge'];
+      
+      const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || '';
+      
+      if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+        console.log('✅ Webhook verified');
+        return res.status(200).send(challenge);
+      } else {
+        return res.status(403).send('Forbidden');
+      }
+    }
+    
+    // Handle incoming messages (POST)
+    const body = req.body;
+    
+    console.log('\n📨 Webhook received:', JSON.stringify(body, null, 2));
+    
+    if (body.object === 'whatsapp_business_account') {
+      const entry = body.entry?.[0];
+      const changes = entry?.changes?.[0];
+      const value = changes?.value;
+      
+      if (!value) {
+        return res.sendStatus(200);
+      }
+      
+      // Handle messages
+      if (value.messages) {
+        for (const message of value.messages) {
+          await this.processIncomingMessage(message, value);
+        }
+      }
+      
+      // Handle statuses (delivery, read receipts)
+      if (value.statuses) {
+        console.log('📊 Message statuses:', value.statuses);
+      }
+      
+      return res.sendStatus(200);
+    }
+    
+    res.sendStatus(404);
+  } catch (error) {
+    console.error('❌ Webhook error:', error);
+    res.sendStatus(500);
+  }
+}
+
+// Process incoming messages
+async processIncomingMessage(message, value) {
+  try {
+    const from = message.from; // Customer's phone number
+    const messageId = message.id;
+    const timestamp = message.timestamp;
+    
+    console.log(`\n📥 Processing message from: ${from}`);
+    console.log(`Message ID: ${messageId}`);
+    console.log(`Type: ${message.type}`);
+    
+    // Handle VIDEO messages
+    if (message.type === 'video') {
+      console.log('🎥 Video message received!');
+      await this.handleIncomingVideo(message, from);
+    }
+    
+    // Handle IMAGE messages (in case they send photos)
+    else if (message.type === 'image') {
+      console.log('📷 Image message received!');
+      await this.handleIncomingImage(message, from);
+    }
+    
+    // Handle TEXT messages
+    else if (message.type === 'text') {
+      console.log('💬 Text message:', message.text.body);
+      // Could implement chatbot responses here
+    }
+    
+    // Handle BUTTON REPLIES
+    else if (message.type === 'button') {
+      console.log('🔘 Button clicked:', message.button);
+      // The button payload will be in message.button.payload
+      // This is already handled by your button endpoint
+    }
+    
+    // Handle INTERACTIVE REPLIES (quick replies from template buttons)
+    else if (message.type === 'interactive') {
+      console.log('⚡ Interactive reply:', message.interactive);
+      const replyId = message.interactive.button_reply?.id;
+      
+      if (replyId === 'record_device_video') {
+        // Send instructions when button is clicked via webhook
+        await this.sendVideoInstructions(from);
+      }
+    }
+    
+    // Handle BUTTON REPLIES (from template quick_reply buttons)
+    else if (message.type === 'button') {
+      console.log('🔘 Button reply:', message.button);
+      const buttonPayload = message.button.payload;
+      
+      if (buttonPayload === 'record_device_video') {
+        // Send instructions when button is clicked
+        await this.sendVideoInstructions(from);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing message:', error);
+  }
+}
+
+// Handle incoming video from customer
+async handleIncomingVideo(message, from) {
+  const { Job } = require('../models/Schemas');
+  const axios = require('axios');
+  const FormData = require('form-data');
+  
+  try {
+    console.log('\n🎥 Processing customer video...');
+    
+    const videoId = message.video.id;
+    const mimeType = message.video.mime_type;
+    const videoCaption = message.video.caption || '';
+    
+    console.log(`Video ID: ${videoId}`);
+    console.log(`MIME type: ${mimeType}`);
+    console.log(`Caption: ${videoCaption}`);
+    
+    // Step 1: Find the job for this customer
+    const phoneNumber = from.replace('91', ''); // Remove country code
+    const job = await Job.findOne({
+      'customer.phone': { 
+        $in: [from, phoneNumber, `+91${phoneNumber}`] 
+      },
+      whatsapp_button_clicks: { 
+        $elemMatch: { 
+          button: 'record_device_video' 
+        } 
+      },
+      device_video_received: { $ne: true } // Video not yet received
+    })
+    .sort({ createdAt: -1 }) // Get most recent job
+    .populate('customer');
+    
+    if (!job) {
+      console.log('⚠️ No matching job found for this phone number');
+      
+      // Send acknowledgment anyway
+      await this.sendTextMessageInternal(from, 
+        '✅ Video received! However, we could not match it to a job. Please contact us with your Job ID.'
+      );
+      return;
+    }
+    
+    console.log(`✅ Found job: ${job.job_card_number || job._id}`);
+    
+    // Step 2: Download the video from WhatsApp
+    console.log('📥 Downloading video from WhatsApp...');
+    
+    const mediaUrlResponse = await axios.get(
+      `https://graph.facebook.com/${this.apiVersion}/${videoId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      }
+    );
+    
+    const videoUrl = mediaUrlResponse.data.url;
+    console.log(`Video URL retrieved: ${videoUrl}`);
+    
+    // Download the actual video file
+    const videoResponse = await axios.get(videoUrl, {
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`
+      },
+      responseType: 'arraybuffer',
+      timeout: 60000
+    });
+    
+    const videoBuffer = Buffer.from(videoResponse.data);
+    console.log(`✅ Video downloaded: ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+    
+    // Step 3: Save video reference to database
+    job.device_video_received = true;
+    job.device_video_received_at = new Date();
+    job.device_video_whatsapp_id = videoId;
+    job.device_video_mime_type = mimeType;
+    job.device_video_size = videoBuffer.length;
+    job.device_video_caption = videoCaption;
+    
+    // Optional: Store the video buffer in base64 (if your DB supports it)
+    // OR upload to your own storage service (S3, Cloudinary, etc.)
+    // For now, we'll just store the WhatsApp media ID
+    
+    await job.save();
+    
+    console.log('✅ Job updated with video information');
+    
+    // Step 4: Send confirmation to customer
+    const jobCardNumber = job.job_card_number || job._id.toString().slice(-6);
+    const deviceModel = `${job.device_brand || ''} ${job.device_model}`.trim();
+    
+    const confirmationMessage = `✅ *Video Received!*
+
+Thank you for sending the device video.
+
+📋 Job ID: ${jobCardNumber}
+📱 Device: ${deviceModel}
+🎥 Video: ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB
+
+Our technician will review the video and proceed with the repair.
+
+We'll keep you updated! 🙏`;
+    
+    await this.sendTextMessageInternal(from, confirmationMessage);
+    
+    console.log('✅ Confirmation sent to customer');
+    
+    // Step 5: Forward video to shop/admin (optional)
+    // You could forward this to your shop's WhatsApp number
+    const SHOP_WHATSAPP = process.env.SHOP_WHATSAPP_NUMBER;
+    
+    if (SHOP_WHATSAPP) {
+      const adminMessage = `🎥 *New Device Video Received*
+
+📋 Job: ${jobCardNumber}
+👤 Customer: ${job.customer.name}
+📞 Phone: ${job.customer.phone}
+📱 Device: ${deviceModel}
+🔧 Issue: ${job.reported_issue}
+
+Video size: ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB`;
+      
+      try {
+        // Send text notification to admin
+        await this.sendTextMessageInternal(SHOP_WHATSAPP, adminMessage);
+        
+        // Forward the actual video to admin
+        // Note: We'll upload it again and send it
+        const adminVideoMediaId = await this.uploadMedia(
+          videoBuffer,
+          mimeType,
+          `Customer_Video_${jobCardNumber}.mp4`
+        );
+        
+        await axios.post(
           this.baseUrl,
           {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
-            to: this.formatPhoneNumber(phoneNumber),
+            to: this.formatPhoneNumber(SHOP_WHATSAPP),
             type: 'video',
             video: {
-              id: videoMediaId,
-              caption: `🎥 Device Condition Video\nJob ID: ${jobCardNumber}\nDevice: ${deviceModel}\n\nThank you!`
+              id: adminVideoMediaId,
+              caption: `Device video for Job #${jobCardNumber}`
             }
           },
           {
             headers: {
               'Authorization': `Bearer ${this.accessToken}`,
               'Content-Type': 'application/json'
-            },
-            timeout: 15000
+            }
           }
         );
         
-        videoSent = true;
-        console.log('✅ Device video sent');
-        
-      } catch (error) {
-        videoError = error.message;
-        console.error('❌ Error sending video:', videoError);
+        console.log('✅ Video forwarded to admin');
+      } catch (adminError) {
+        console.error('⚠️ Failed to forward to admin:', adminError.message);
       }
-      
-      // Update job
-      job.device_video_received = videoSent;
-      job.device_video_received_at = new Date();
-      job.device_video_sent_to_whatsapp = videoSent;
-      job.device_video_error = videoError;
-      await job.save();
-      
-      const totalTime = Date.now() - startTime;
-      
-      res.json({
-        success: videoSent,
-        message: videoSent 
-          ? 'Device video sent successfully'
-          : `Failed to send video: ${videoError}`,
-        jobId: job._id,
-        jobCardNumber,
-        videoSent,
-        error: videoError,
-        processingTime: `${totalTime}ms`
-      });
-      
-    } catch (error) {
-      console.error('❌ Error in sendDeviceVideo:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to process device video',
-        error: error.message,
-        processingTime: `${Date.now() - startTime}ms`
-      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error handling incoming video:', error);
+    
+    try {
+      await this.sendTextMessageInternal(from, 
+        '❌ Sorry, there was an error processing your video. Please try again or contact us directly.'
+      );
+    } catch (sendError) {
+      console.error('Failed to send error message:', sendError);
     }
   }
+}
+
+// Handle incoming images
+async handleIncomingImage(message, from) {
+  // Similar to video handling, but for images
+  console.log('📷 Image handling not yet implemented');
+  
+  try {
+    await this.sendTextMessageInternal(from, 
+      '📷 Thank you for the image! For device condition, please send a video if possible.'
+    );
+  } catch (error) {
+    console.error('Error sending image response:', error);
+  }
+}
+
+// Send video recording instructions
+async sendVideoInstructions(phoneNumber) {
+  const instructionMessage = `🎥 *Record Device Video Instructions*
+
+Please record a short video (under 30 seconds) showing:
+
+✓ All angles of your device
+✓ Any visible damage or issues
+✓ The problem you're experiencing
+
+Then *reply to this message* with your video.
+
+📝 Keep the video under 16MB for best results.
+
+Thank you! 🙏`;
+
+  try {
+    await this.sendTextMessageInternal(phoneNumber, instructionMessage);
+    console.log('✅ Video instructions sent');
+  } catch (error) {
+    console.error('❌ Error sending instructions:', error);
+  }
+}
 
   // Send job completion notification
   async sendJobCompletionNotification(req, res) {
@@ -1055,16 +1735,15 @@ Thank you!`;
       
       console.log(`Processing job completion notification for: ${jobId}`);
       
-      const job = await Job.findById(jobId)
-        .populate('customer')
-        .populate('assigned_technician', 'name');
+      // At the beginning of sendDeviceVideo function, after getting jobId:
+const job = await Job.findById(jobId);
 
-      if (!job) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'Job not found' 
-        });
-      }
+if (!job) {
+  return res.status(404).json({
+    success: false,
+    message: 'Job not found'
+  });
+}
 
       if (!job.customer?.phone) {
         return res.status(400).json({
@@ -1077,7 +1756,7 @@ Thank you!`;
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       const customerName = job.customer.name;
       const jobCardNumber = job.job_card_number || job._id.toString().slice(-6);
-      const deviceModel = `${job.device_brand || ''} ${job.device_model}`.trim();
+const deviceModel = `${job.device_brand || ''} ${job.device_model}`.trim();
       const totalAmount = job.total_amount || 0;
       const advancePayment = job.advance_payment || 0;
       const balanceAmount = Math.max(0, totalAmount - advancePayment);
