@@ -857,80 +857,129 @@ const generateAndDownloadPDF = async (jobData) => {
         console.error('PDF download error:', err);
       });
       
-      // 4. Get video blob if exists
-      let videoBlobData = null;
-      if (deviceVideo) {
-        console.log('Getting video blob...');
-        videoBlobData = await getVideoBlob(deviceVideo);
-      }
-      
-      // In handleSubmit function:
-      console.log('STEP 4: Sending WhatsApp template with PDF...');
-      console.log('PDF status:', pdfBlob ? `${(pdfBlob.size / 1024).toFixed(2)}KB` : 'None');
+      // In handleSubmit function, around line 670-690:
 
-      let whatsappResult = { success: false, message: 'Not attempted' };
+// 4. Get video blob if exists
+let videoBlobData = null;
+if (deviceVideo) {
+  console.log('Getting video blob...');
+  videoBlobData = await getVideoBlob(deviceVideo);
+  console.log('Video blob size:', videoBlobData ? `${(videoBlobData.size / 1024 / 1024).toFixed(2)}MB` : 'null');
+}
 
-      try {
-        // ALWAYS try to send with PDF first
-        if (pdfBlob) {
-          console.log('Calling sendJobIntakeWithMedia for template document...');
-          whatsappResult = await WhatsAppService.sendJobIntakeWithMedia(
-            jobId,
-            pdfBlob // Send only PDF
-          );
-        } else {
-          console.log('No PDF available, falling back to simple notification...');
-          whatsappResult = await WhatsAppService.sendJobIntakeNotification(jobId);
-        }
-        console.log('WhatsApp result:', whatsappResult);
-      } catch (whatsappError) {
-        console.error('WhatsApp error:', whatsappError);
-        whatsappResult = {
-          success: false,
-          message: whatsappError.message || 'WhatsApp notification failed'
-        };
-      }
-      
-      // Wait for PDF download to complete
-      await downloadPromise;
-      
-      // 6. Set success message
-      const totalTime = Date.now() - startTime;
-      console.log('='.repeat(50));
-      console.log(`COMPLETED in ${totalTime}ms`);
-      console.log('='.repeat(50));
-      
-      let successMessage = `✅ Job #${jobCardNumber} created! PDF downloaded.`;
-      
-      if (whatsappResult?.success) {
-        const mediaStatus = [];
-        if (whatsappResult.results?.pdf?.sent) mediaStatus.push('PDF');
-        if (whatsappResult.results?.photo?.sent) mediaStatus.push('Photo');
-        if (whatsappResult.results?.video?.sent) mediaStatus.push('Video');
-        
-        if (mediaStatus.length > 0) {
-          successMessage += ` WhatsApp sent with: ${mediaStatus.join(', ')} ✓`;
-        } else if (whatsappResult.results?.template?.sent) {
-          successMessage += ' WhatsApp template sent ✓';
-        }
-      } else if (whatsappResult?.results?.template?.sent) {
-        successMessage += ' WhatsApp template sent ✓';
-        
-        // Show which media failed
-        const failed = [];
-        if (whatsappResult.results?.pdf?.error) failed.push('PDF');
-        if (whatsappResult.results?.photo?.error) failed.push('Photo');
-        if (whatsappResult.results?.video?.error) failed.push('Video');
-        
-        if (failed.length > 0) {
-          successMessage += ` (${failed.join(', ')} failed)`;
-        }
-      } else {
-        successMessage += ` (WhatsApp: ${whatsappResult?.message || 'failed'})`;
-      }
-      
-      successMessage += ` [${(totalTime / 1000).toFixed(1)}s]`;
-      
+// In handleSubmit function:
+console.log('STEP 4: Sending WhatsApp template with PDF...');
+console.log('PDF status:', pdfBlob ? `${(pdfBlob.size / 1024).toFixed(2)}KB` : 'None');
+
+let whatsappResult = { success: false, message: 'Not attempted' };
+
+try {
+  // ALWAYS try to send with PDF first
+  if (pdfBlob) {
+    console.log('Calling sendJobIntakeWithMedia for template document...');
+    whatsappResult = await WhatsAppService.sendJobIntakeWithMedia(
+      jobId,
+      pdfBlob // Send only PDF
+    );
+  } else {
+    console.log('No PDF available, falling back to simple notification...');
+    whatsappResult = await WhatsAppService.sendJobIntakeNotification(jobId);
+  }
+  console.log('WhatsApp result:', whatsappResult);
+} catch (whatsappError) {
+  console.error('WhatsApp error:', whatsappError);
+  whatsappResult = {
+    success: false,
+    message: whatsappError.message || 'WhatsApp notification failed'
+  };
+}
+
+// ✅✅✅ MISSING CODE - ADD THIS!
+// STEP 5: Send device video separately
+let videoResult = null;
+if (videoBlobData && formData.customerPhone) {
+  console.log('🎬 STEP 5: Calling sendDeviceVideo API...');
+  console.log(`Phone: ${formData.customerPhone}, Video size: ${(videoBlobData.size / 1024 / 1024).toFixed(2)}MB`);
+  
+  setProcessingStatus('Sending device video...');
+  
+  try {
+    // THIS IS THE MISSING API CALL!
+    videoResult = await WhatsAppService.sendDeviceVideo(
+      jobId,
+      formData.customerPhone,
+      videoBlobData
+    );
+    
+    console.log('Device video API response:', videoResult);
+    
+    if (videoResult?.success) {
+      console.log('✅ Device video sent successfully');
+    } else {
+      console.warn('⚠️ Device video sending failed:', videoResult?.message);
+    }
+  } catch (videoError) {
+    console.error('❌ Error sending device video:', videoError);
+    videoResult = {
+      success: false,
+      message: videoError.message || 'Video sending failed'
+    };
+  }
+} else {
+  console.log('📹 No device video to send:', {
+    hasVideo: !!videoBlobData,
+    hasPhone: !!formData.customerPhone,
+    videoSize: videoBlobData?.size
+  });
+}
+
+// Wait for PDF download to complete
+await downloadPromise;
+
+// 6. Set success message
+const totalTime = Date.now() - startTime;
+console.log('='.repeat(50));
+console.log(`COMPLETED in ${totalTime}ms`);
+console.log('='.repeat(50));
+
+let successMessage = `✅ Job #${jobCardNumber} created! PDF downloaded.`;
+
+if (whatsappResult?.success) {
+  const mediaStatus = [];
+  if (whatsappResult.results?.pdf?.sent) mediaStatus.push('PDF');
+  if (whatsappResult.results?.photo?.sent) mediaStatus.push('Photo');
+  
+  if (mediaStatus.length > 0) {
+    successMessage += ` WhatsApp sent with: ${mediaStatus.join(', ')} ✓`;
+  } else if (whatsappResult.results?.template?.sent) {
+    successMessage += ' WhatsApp template sent ✓';
+  }
+} else if (whatsappResult?.results?.template?.sent) {
+  successMessage += ' WhatsApp template sent ✓';
+  
+  // Show which media failed
+  const failed = [];
+  if (whatsappResult.results?.pdf?.error) failed.push('PDF');
+  if (whatsappResult.results?.photo?.error) failed.push('Photo');
+  
+  if (failed.length > 0) {
+    successMessage += ` (${failed.join(', ')} failed)`;
+  }
+} else {
+  successMessage += ` (WhatsApp: ${whatsappResult?.message || 'failed'})`;
+}
+
+// ✅ Add video status to success message
+if (videoResult) {
+  if (videoResult.success) {
+    successMessage += ' Video sent ✓';
+  } else {
+    successMessage += ` (Video: ${videoResult.message || 'failed'})`;
+  }
+}
+
+successMessage += ` [${(totalTime / 1000).toFixed(1)}s]`;
+
       setSuccess(successMessage);
       setProcessingStatus('');
       
@@ -988,51 +1037,72 @@ const generateAndDownloadPDF = async (jobData) => {
       }
     }
   };
-  
-  // Start device video recording
-  const startDeviceVideoRecording = async () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      try {
-        const mediaStream = videoRef.current.srcObject;
-        const recorder = new MediaRecorder(mediaStream, {
-          mimeType: 'video/webm;codecs=vp8'
-        });
-        const chunks = [];
-        
-        recorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            chunks.push(event.data);
-          }
-        };
-        
-        recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          const videoUrl = URL.createObjectURL(blob);
-          console.log('Video recorded, size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
-          setDeviceVideo(videoUrl);
-          setCameraMode('video');
-          
-          if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current);
-            recordingTimerRef.current = null;
-          }
-          setRecordingTime(0);
-        };
-        
-        recorder.start();
-        setMediaRecorder(recorder);
-        setIsRecording(true);
-        
-        setRecordingTime(0);
-        recordingTimerRef.current = setInterval(() => {
-          setRecordingTime(prev => prev + 1);
-        }, 1000);
-      } catch (err) {
-        console.error('Error starting recording:', err);
-        setError('Could not start recording');
+
+  // Update startDeviceVideoRecording function in your React component:
+
+const startDeviceVideoRecording = async () => {
+  if (videoRef.current && videoRef.current.srcObject) {
+    try {
+      const mediaStream = videoRef.current.srcObject;
+      
+      // ✅ Lower quality for better WhatsApp compatibility
+      const options = {
+        mimeType: 'video/webm;codecs=vp8',
+        videoBitsPerSecond: 1000000, // 1 Mbps for smaller file
+        audioBitsPerSecond: 64000    // 64 Kbps for audio
+      };
+      
+      // Try different mimeTypes if needed
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/mp4';
       }
+      
+      const recorder = new MediaRecorder(mediaStream, options);
+      const chunks = [];
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+      
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: options.mimeType });
+        const videoUrl = URL.createObjectURL(blob);
+        console.log('Video recorded, size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
+        setDeviceVideo(videoUrl);
+        
+        // Cleanup
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        setRecordingTime(0);
+      };
+      
+      // Limit recording to 15 seconds max
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => {
+          // Auto-stop at 15 seconds
+          if (prev >= 15) {
+            stopDeviceVideoRecording();
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+      
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      setError('Could not start recording. Please try again.');
     }
-  };
+  }
+};
   
   // Stop device video recording
   const stopDeviceVideoRecording = () => {
