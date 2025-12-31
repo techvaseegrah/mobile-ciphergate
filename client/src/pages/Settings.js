@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getBatches, createBatch, updateBatch, deleteBatch } from '../utils/batchUtils';
+import api from '../services/api';
 
 const Settings = () => {
   const [batches, setBatches] = useState([]);
@@ -31,11 +32,8 @@ const Settings = () => {
     
     const loadLocationSettings = async () => {
       try {
-        const response = await fetch('/api/admin/location-settings');
-        if (response.ok) {
-          const settings = await response.json();
-          setLocationSettings(settings);
-        }
+        const response = await api.get('/admin/location-settings');
+        setLocationSettings(response.data);
       } catch (error) {
         console.error('Error loading location settings:', error);
       }
@@ -163,19 +161,10 @@ const Settings = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('/api/admin/location-settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(locationSettings)
-      });
+      const response = await api.put('/admin/location-settings', locationSettings);
       
-      if (response.ok) {
+      if (response.status === 200) {
         alert('Location settings saved successfully');
-      } else {
-        const errorData = await response.json();
-        alert(`Error saving location settings: ${errorData.error}`);
       }
     } catch (error) {
       console.error('Error saving location settings:', error);
@@ -641,6 +630,5 @@ const Settings = () => {
     </div>
   );
 };
-
 
 export default Settings;
