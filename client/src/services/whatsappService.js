@@ -100,63 +100,67 @@ class WhatsAppService {
     }
   }
 
-  // Send device video when collected from customer
-  static async sendDeviceVideo(jobId, phoneNumber, videoBlob) {
-    try {
-      console.log(`[WhatsApp] Sending device video for job: ${jobId}`);
-      
-      const formData = new FormData();
-      
-      if (videoBlob) {
-        let actualVideoBlob = videoBlob;
-        
-        // If videoBlob is a URL, fetch it first
-        if (typeof videoBlob === 'string') {
-          if (videoBlob.startsWith('blob:')) {
-            console.log('[WhatsApp] Fetching video from blob URL...');
-            const response = await fetch(videoBlob);
-            actualVideoBlob = await response.blob();
-          } else if (videoBlob.startsWith('data:')) {
-            actualVideoBlob = await this.dataURLtoBlob(videoBlob);
-          }
-        }
-        
-        if (actualVideoBlob && actualVideoBlob.size > 0) {
-          if (actualVideoBlob.size > 16 * 1024 * 1024) {
-            console.log(`[WhatsApp] Video too large: ${(actualVideoBlob.size / 1024 / 1024).toFixed(2)}MB (max 16MB)`);
-            return {
-              success: false,
-              message: 'Video too large. Please keep it under 16MB.'
-            };
-          } else {
-            const videoFile = new File([actualVideoBlob], `Device_Video_${jobId}.mp4`, { 
-              type: 'video/mp4' 
-            });
-            formData.append('video', videoFile);
-            console.log(`[WhatsApp] Video added: ${(videoFile.size / 1024 / 1024).toFixed(2)}MB`);
-          }
-        }
+  // In WhatsAppService.js, update sendDeviceVideo function:
+
+static async sendDeviceVideo(jobId, phoneNumber, videoBlob) {
+  try {
+    console.log(`[WhatsApp] Sending device video for job: ${jobId}`);
+    console.log(`[WhatsApp] Phone: ${phoneNumber}`);
+    console.log(`[WhatsApp] Video blob type: ${typeof videoBlob}, size: ${videoBlob?.size || 0} bytes`);
+    
+    let actualVideoBlob = videoBlob;
+    
+    // If videoBlob is a URL (blob: or data:), fetch it
+    if (typeof videoBlob === 'string') {
+      if (videoBlob.startsWith('blob:')) {
+        console.log('[WhatsApp] Fetching video from blob URL...');
+        const response = await fetch(videoBlob);
+        actualVideoBlob = await response.blob();
+      } else if (videoBlob.startsWith('data:')) {
+        console.log('[WhatsApp] Converting data URL to blob...');
+        actualVideoBlob = await this.dataURLtoBlob(videoBlob);
       }
-      
-      const response = await api.post(`/whatsapp/send-device-video/${jobId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        params: {
-          phoneNumber: phoneNumber
-        },
-        timeout: 60000
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('[WhatsApp] Error sending device video:', error);
+    }
+    
+    if (!actualVideoBlob || actualVideoBlob.size === 0) {
+      console.error('[WhatsApp] Video blob is empty!');
       return {
         success: false,
-        message: error.response?.data?.message || error.message || 'Failed to send device video'
+        message: 'Video file is empty'
       };
     }
+    
+    console.log(`[WhatsApp] Final video blob: ${(actualVideoBlob.size / 1024 / 1024).toFixed(2)}MB`);
+    
+    const formData = new FormData();
+    
+    // Create a proper File object
+    const videoFile = new File([actualVideoBlob], `Device_Video_${jobId}.mp4`, { 
+      type: 'video/mp4' 
+    });
+    
+    formData.append('video', videoFile);
+    console.log(`[WhatsApp] FormData created, video size: ${(videoFile.size / 1024 / 1024).toFixed(2)}MB`);
+    
+    // Send to server
+    const response = await api.post(`/whatsapp/send-device-video/${jobId}?phoneNumber=${phoneNumber}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 60000
+    });
+    
+    console.log('[WhatsApp] Server response:', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error('[WhatsApp] Error sending device video:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'Failed to send device video'
+    };
   }
+}
 
   // Convert data URL to Blob
   static async dataURLtoBlob(dataURL) {
