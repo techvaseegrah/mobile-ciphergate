@@ -43,8 +43,13 @@ router.post('/send-intake/:jobId', whatsappController.sendJobIntakeNotification)
 // Handle button click
 router.post('/handle-button/:jobId/:buttonType', whatsappController.handleButtonClick);
 
+router.get('/webhook', whatsappController.handleWebhook);
+router.post('/webhook', whatsappController.handleWebhook);
+
 // Send device video
 router.post('/send-device-video/:jobId', upload.single('video'), handleMulterError, whatsappController.sendDeviceVideo);
+
+router.post('/send-shop-video', whatsappController.sendShopVideoToCustomer);
 
 // Other routes...
 router.post('/send-completion/:jobId', whatsappController.sendJobCompletionNotification);
