@@ -29,7 +29,7 @@ const Departments = () => {
 
   const fetchDepartments = async () => {
     try {
-      const res = await axios.get('http://localhost:5001/api/departments');
+      const res = await axios.get('/api/departments');
       setDepartments(res.data);
       setLoading(false);
     } catch (err) {
@@ -44,11 +44,11 @@ const Departments = () => {
     try {
       if (editingDepartment) {
         // Update existing department
-        await axios.put(`http://localhost:5001/api/departments/${editingDepartment._id}`, { name: departmentName });
+        await axios.put(`/api/departments/${editingDepartment._id}`, { name: departmentName });
         setSuccess('Department updated successfully');
       } else {
         // Create new department
-        await axios.post('http://localhost:5001/api/departments', { name: departmentName });
+        await axios.post('/api/departments', { name: departmentName });
         setSuccess('Department created successfully');
       }
       
@@ -72,7 +72,7 @@ const Departments = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this department?')) {
       try {
-        await axios.delete(`http://localhost:5001/api/departments/${id}`);
+        await axios.delete(`/api/departments/${id}`);
         fetchDepartments();
         setSuccess('Department deleted successfully');
       } catch (err) {

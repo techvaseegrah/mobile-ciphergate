@@ -29,7 +29,7 @@ const EmployeeDashboard = () => {
 
   const fetchWorkerData = useCallback(async () => {
     try {
-      const res = await axios.get(`http://localhost:5001/api/workers/${id}`);
+      const res = await axios.get(`/api/workers/${id}`);
       setWorker(res.data);
     } catch (err) {
       console.error(err);
@@ -40,7 +40,7 @@ const EmployeeDashboard = () => {
   const fetchJobs = useCallback(async () => {
     try {
       // Use the new endpoint that fetches jobs for a specific worker
-      const res = await axios.get(`http://localhost:5001/api/jobs/worker/${id}`);
+      const res = await axios.get(`/api/jobs/worker/${id}`);
       setJobs(res.data);
     } catch (err) {
       console.error(err);
@@ -305,7 +305,7 @@ const EmployeeDashboard = () => {
 
           // Get worker's face data
           try {
-            const workerRes = await axios.get(`http://localhost:5001/api/workers/${worker._id}/face-data`);
+            const workerRes = await axios.get(`/api/workers/${worker._id}/face-data`);
             const workerFaceData = workerRes.data;
             
             if (!workerFaceData || !workerFaceData.faceImages || workerFaceData.faceImages.length === 0) {
@@ -371,7 +371,7 @@ const EmployeeDashboard = () => {
   // Record attendance for the worker
   const recordAttendance = async (workerId) => {
     try {
-      const response = await axios.post('http://localhost:5001/api/workers/attendance', {
+      const response = await axios.post('/api/workers/attendance', {
         workerId: workerId,
         method: 'face'
       });

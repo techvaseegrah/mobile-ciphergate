@@ -16,7 +16,7 @@ const EmployeeLogin = () => {
   useEffect(() => {
     const fetchWorkers = async () => {
       try {
-        const res = await axios.get('http://localhost:5001/api/workers');
+        const res = await axios.get('/api/workers');
         setWorkers(res.data);
       } catch (err) {
         console.error(err);
@@ -42,7 +42,7 @@ const EmployeeLogin = () => {
 
     try {
       // Call the authentication API
-      const res = await axios.post('http://localhost:5001/api/workers/login', {
+      const res = await axios.post('/api/workers/login', {
         workerId: selectedWorker._id,
         password
       });

@@ -769,7 +769,7 @@ const Workers = () => {
   const recordRFIDAttendance = async (rfid) => {
     try {
       setScanningRFID(false);
-      const response = await axios.post('http://localhost:5001/api/workers/attendance', {
+      const response = await axios.post('/api/workers/attendance', {
         rfid,
         method: 'checkIn'
       });
@@ -793,7 +793,7 @@ const Workers = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this worker?')) {
       try {
-        await axios.delete(`http://localhost:5001/api/workers/${id}`);
+        await axios.delete(`/api/workers/${id}`);
         fetchWorkers(); // Refresh the list
         setSuccess('Worker deleted successfully');
       } catch (err) {

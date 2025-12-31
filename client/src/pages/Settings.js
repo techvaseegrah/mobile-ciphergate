@@ -31,7 +31,7 @@ const Settings = () => {
     
     const loadLocationSettings = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/admin/location-settings');
+        const response = await fetch('/api/admin/location-settings');
         if (response.ok) {
           const settings = await response.json();
           setLocationSettings(settings);
@@ -163,7 +163,7 @@ const Settings = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:5001/api/admin/location-settings', {
+      const response = await fetch('/api/admin/location-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
