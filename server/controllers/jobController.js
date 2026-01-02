@@ -212,11 +212,53 @@ exports.updateJob = async (req, res) => {
 // GET /api/jobs/active
 exports.getActiveJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ status: { $ne: 'Picked Up' } })
+    const jobs = await Job.find({ status: { $nin: ['Picked Up', 'Cancelled'] } })
       .populate('customer')
       .populate('taken_by_worker', 'name')
       .sort({ repair_job_taken_time: -1 });
     res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /api/jobs/cancelled
+exports.getCancelledJobs = async (req, res) => {
+  try {
+    const jobs = await Job.find({ status: 'Cancelled' })
+      .populate('customer')
+      .populate('taken_by_worker', 'name')
+      .sort({ cancelled_at: -1 });
+    res.json(jobs);
+  } catch (err) {
+    console.error('Error fetching cancelled jobs:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// PUT /api/jobs/:id/cancel
+exports.cancelJob = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cancellation_reason } = req.body;
+    
+    const job = await Job.findByIdAndUpdate(
+      id,
+      { 
+        status: 'Cancelled', 
+        cancellation_reason,
+        cancelled_at: new Date()
+      },
+      { new: true }
+    )
+      .populate('customer')
+      .populate('taken_by_worker', 'name');
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.json({ success: true, job });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -178,14 +178,14 @@ const Suppliers = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading suppliers...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Suppliers Management</h1>

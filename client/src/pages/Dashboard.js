@@ -69,7 +69,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading dashboard...</div>
       </div>
     );
@@ -77,7 +77,7 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
@@ -86,11 +86,11 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen transition-all duration-300">
       {/* Header */}
       <div className="bg-white rounded-lg shadow mb-8 p-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600">Welcome to your repair shop management system</p>
         </div>
       </div>

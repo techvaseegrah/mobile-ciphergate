@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import JobIntake from './pages/JobIntake';
@@ -20,10 +20,12 @@ import Suppliers from './pages/Suppliers';
 import Purchases from './pages/Purchases';
 import Holidays from './pages/Holidays';
 import Salary from './pages/Salary';
+import CancelledJobs from './pages/CancelledJobs';
+
+import EmployeeSidebar from './components/EmployeeSidebar';
 
 // Component to conditionally render Sidebar
-const ConditionalSidebar = () => {
-  const location = useLocation();
+const ConditionalSidebar = ({ location, isSidebarOpen, toggleSidebar }) => {
   const hideSidebarRoutes = ['/', '/admin/login', '/employee/login'];
   
   // Check if current route is in the list of routes where sidebar should be hidden
@@ -44,15 +46,51 @@ const ConditionalSidebar = () => {
   const isEmployee = localStorage.getItem('employee');
   const showSidebarSimple = !shouldHideSidebar && (isAdmin || (isEmployee && (isEmployeeAttendance || isEmployeeDashboard)));
   
-  return showSidebarSimple ? <Sidebar /> : null;
+  // Handle employee sidebar
+  if (isEmployee && (isEmployeeAttendance || isEmployeeDashboard)) {
+    // Parse employee data from localStorage
+    try {
+      const employee = JSON.parse(localStorage.getItem('employee'));
+      return (
+        <EmployeeSidebar 
+          worker={employee} 
+          onLogout={() => {
+            localStorage.removeItem('employee');
+            window.location.href = '/employee/login';
+          }}
+          isOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+        />
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  return showSidebarSimple ? <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> : null;
 };
 
-function App() {
+// Component that has access to Router context
+function AppContent() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+  
+  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, [location]);
+  
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+  
   return (
-    <Router>
-      <div className="bg-gray-100 min-h-screen">
-        <ConditionalSidebar />
-        
+    <div className="flex min-h-screen bg-gray-100">
+      <ConditionalSidebar location={location} isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      
+      <div className={`flex-1 transition-all duration-300 lg:ml-64`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -70,11 +108,20 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/purchases" element={<Purchases />} />
+          <Route path="/cancelled-jobs" element={<CancelledJobs />} />
           <Route path="/employee/login" element={<EmployeeLogin />} />
           <Route path="/employee/:id/dashboard" element={<EmployeeDashboard />} />
           <Route path="/employee/:id/attendance" element={<WorkerAttendance />} />
         </Routes>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

@@ -1397,7 +1397,7 @@ const Attendance = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading attendance data...</p>
@@ -1407,7 +1407,7 @@ const Attendance = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold">Attendance Management</h2>

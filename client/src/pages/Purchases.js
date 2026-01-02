@@ -493,14 +493,14 @@ const Purchases = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading purchases...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <div className="flex items-center mb-2">

@@ -45,7 +45,7 @@ const Financials = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading financial data...</div>
       </div>
     );
@@ -53,7 +53,7 @@ const Financials = () => {
 
   if (error) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
@@ -62,7 +62,7 @@ const Financials = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Financial Dashboard</h1>
         <p className="text-gray-600">Overview of your repair shop's financial performance</p>

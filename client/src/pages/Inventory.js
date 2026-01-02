@@ -9,6 +9,8 @@ const Inventory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   // Form state
@@ -76,6 +78,17 @@ const Inventory = () => {
       // Not a critical error, so we won't set error state
     }
   };
+  
+  // Filter parts based on search term
+  const filteredParts = parts.filter(part => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      part.name.toLowerCase().includes(searchLower) ||
+      part.sku.toLowerCase().includes(searchLower) ||
+      (part.category?.name && part.category.name.toLowerCase().includes(searchLower)) ||
+      (part.supplier?.name && part.supplier.name.toLowerCase().includes(searchLower))
+    );
+  });
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -246,6 +259,28 @@ const Inventory = () => {
     setEditingPartId(part._id);
     setShowModal(true);
   };
+  
+  const handleDelete = async (partId) => {
+    if (window.confirm('Are you sure you want to delete this part? This action cannot be undone.')) {
+      try {
+        setDeleting(true);
+        await api.delete(`/inventory/${partId}`);
+        setSuccess('Part deleted successfully!');
+        fetchParts(); // Refresh the parts list
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        console.error(err);
+        setError('Failed to delete part. Please try again.');
+        
+        // Clear error message after 5 seconds
+        setTimeout(() => setError(''), 5000);
+      } finally {
+        setDeleting(false);
+      }
+    }
+  };
 
   // Fetch parts, categories, and suppliers from the backend
   useEffect(() => {
@@ -256,14 +291,14 @@ const Inventory = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading inventory...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
@@ -523,12 +558,23 @@ const Inventory = () => {
       )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="border-b border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-800">Parts Inventory ({parts.length})</h2>
+        <div className="border-b border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">Parts Inventory ({parts.length})</h2>
+          </div>
+          <div className="w-full md:w-auto">
+            <input
+              type="text"
+              placeholder="Search parts by name, SKU, category, or supplier..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
         </div>
-        {parts.length === 0 ? (
+        {filteredParts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No parts found in inventory.
+            {searchTerm ? 'No parts match your search.' : 'No parts found in inventory.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -545,7 +591,7 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {parts.map((part) => (
+                {filteredParts.map((part) => (
                   <tr key={part._id} className={part.stock <= part.min_stock_alert ? 'bg-red-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{part.name}</div>
@@ -576,6 +622,13 @@ const Inventory = () => {
                         className="text-blue-600 hover:text-blue-900 mr-4"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(part._id)}
+                        disabled={deleting}
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>

@@ -244,7 +244,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="ml-64 p-8">
+    <div className="p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Settings</h1>
         

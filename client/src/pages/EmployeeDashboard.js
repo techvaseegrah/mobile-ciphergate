@@ -13,11 +13,16 @@ const EmployeeDashboard = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Face recognition states
   const [showFaceModal, setShowFaceModal] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [faceProcessing, setFaceProcessing] = useState(false);
+  
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
   const [faceError, setFaceError] = useState('');
   const [faceSuccess, setFaceSuccess] = useState('');
   
@@ -111,6 +116,10 @@ const EmployeeDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('employee');
+    // Close sidebar on mobile when logging out
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
     navigate('/employee/login');
   };
 
@@ -394,8 +403,8 @@ const EmployeeDashboard = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-100">
-        <EmployeeSidebar worker={worker} onLogout={handleLogout} />
-        <div className="flex-1 ml-64 flex items-center justify-center">
+        <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading dashboard...</p>
@@ -408,8 +417,8 @@ const EmployeeDashboard = () => {
   if (error) {
     return (
       <div className="flex min-h-screen bg-gray-100">
-        <EmployeeSidebar worker={worker} onLogout={handleLogout} />
-        <div className="flex-1 ml-64 flex items-center justify-center">
+        <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        <div className="flex-1 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -434,9 +443,9 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <EmployeeSidebar worker={worker} onLogout={handleLogout} />
+      <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
-      <div className="flex-1 ml-64">
+      <div className="flex-1">
         {/* Header */}
         <div className="bg-white shadow">
           <div className="max-w-6xl mx-auto px-4 py-4">

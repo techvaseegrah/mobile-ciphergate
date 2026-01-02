@@ -19,6 +19,9 @@ const JobDetail = () => {
   const [newPart, setNewPart] = useState({ part: '', quantity: 1, price_type: 'Internal' });
   const [editedParts, setEditedParts] = useState({}); // Track edited part costs
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false); // Track WhatsApp sending status
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
@@ -74,6 +77,7 @@ const JobDetail = () => {
       case 'In Progress': return 'bg-blue-100 text-blue-800';
       case 'Done': return 'bg-green-100 text-green-800';
       case 'Picked Up': return 'bg-purple-100 text-purple-800';
+      case 'Cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-yellow-100 text-yellow-800';
     }
   };
@@ -181,7 +185,38 @@ const JobDetail = () => {
       setUpdating(false);
     }
   };
-
+  
+  // Cancel the job
+  const cancelJob = async () => {
+    if (!cancellationReason.trim()) {
+      setError('Please provide a reason for cancellation');
+      return;
+    }
+    
+    try {
+      setCancelling(true);
+      
+      const response = await api.put(`/jobs/${id}/cancel`, {
+        cancellation_reason: cancellationReason
+      });
+      
+      if (response.data.success) {
+        setSuccess('Job cancelled successfully!');
+        setJob(response.data.job); // Update job status in UI
+        setShowCancelModal(false);
+        setCancellationReason(''); // Clear the reason
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccess(''), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to cancel job');
+    } finally {
+      setCancelling(false);
+    }
+  };
+  
   // Resend WhatsApp notification (for cases where it failed)
   const resendWhatsAppNotification = async () => {
     if (window.confirm('Resend WhatsApp completion notification to customer?')) {
@@ -625,7 +660,7 @@ const JobDetail = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64 flex items-center justify-center">
+      <div className="p-8 bg-gray-100 min-h-screen md:ml-64 flex items-center justify-center">
         <div className="text-xl">Loading job details...</div>
       </div>
     );
@@ -633,7 +668,7 @@ const JobDetail = () => {
 
   if (error) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64">
+      <div className="p-8 bg-gray-100 min-h-screen md:ml-64">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
@@ -643,7 +678,7 @@ const JobDetail = () => {
 
   if (!job) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen ml-64">
+      <div className="p-8 bg-gray-100 min-h-screen md:ml-64">
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
           Job not found
         </div>
@@ -652,7 +687,7 @@ const JobDetail = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen ml-64">
+    <div className="p-8 bg-gray-100 min-h-screen md:ml-64">
       {success && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
           {success}
@@ -736,7 +771,7 @@ const JobDetail = () => {
             </button>
           )}
           
-          {job.status !== 'Done' && job.status !== 'Picked Up' && (
+          {job.status !== 'Done' && job.status !== 'Picked Up' && job.status !== 'Cancelled' && (
             <button 
               onClick={markAsCompleted}
               disabled={updating || sendingWhatsApp}
@@ -758,6 +793,18 @@ const JobDetail = () => {
                   Mark as Completed
                 </>
               )}
+            </button>
+          )}
+          
+          {job.status !== 'Done' && job.status !== 'Picked Up' && job.status !== 'Cancelled' && (
+            <button 
+              onClick={() => setShowCancelModal(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded flex items-center hover:bg-red-700"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+              Cancel Job
             </button>
           )}
         </div>
@@ -1102,6 +1149,56 @@ const JobDetail = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Cancel Job Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Cancel Job</h3>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Cancellation
+                </label>
+                <textarea
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  rows="4"
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Enter reason for cancelling this job..."
+                  disabled={cancelling}
+                />
+              </div>
+              
+              <div className="text-sm text-gray-500 mb-6">
+                This job will be marked as cancelled and will no longer appear in active jobs.
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancellationReason('');
+                  }}
+                  disabled={cancelling}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={cancelJob}
+                  disabled={cancelling || !cancellationReason.trim()}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancelling ? 'Cancelling...' : 'Confirm Cancel'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -95,9 +95,11 @@ const JobSchema = new Schema({
   job_card_number: String,
   status: { 
     type: String, 
-    enum: ['Intake', 'Pending Approval', 'In Progress', 'Done', 'Picked Up'], 
+    enum: ['Intake', 'Pending Approval', 'In Progress', 'Done', 'Picked Up', 'Cancelled'], 
     default: 'Intake' 
   },
+  cancellation_reason: String,
+  cancelled_at: Date,
   taken_by_worker: { type: Schema.Types.ObjectId, ref: 'Worker' },
   assigned_technician: { type: Schema.Types.ObjectId, ref: 'Worker' },
   repair_job_taken_time: { type: Date, default: Date.now },
