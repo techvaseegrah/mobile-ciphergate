@@ -847,7 +847,7 @@ const Purchases = () => {
 
       {/* Add Purchase Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 flex justify-between items-center rounded-t-xl">
               <h2 className="text-xl font-bold text-gray-800 flex items-center">
@@ -879,7 +879,7 @@ const Purchases = () => {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                         required
-                        disabled={!isEditing}
+                        disabled={editingPurchaseId && !isEditing}
                       >
                         <option value="">Select a supplier</option>
                         {suppliers.map(supplier => (
@@ -901,7 +901,7 @@ const Purchases = () => {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                         required
-                        disabled={!isEditing}
+                        disabled={editingPurchaseId && !isEditing}
                       />
                     </div>
                     
@@ -916,7 +916,7 @@ const Purchases = () => {
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                         placeholder="e.g. INV-2023-001"
-                        disabled={!isEditing}
+                        disabled={editingPurchaseId && !isEditing}
                       />
                     </div>
                     
@@ -929,7 +929,7 @@ const Purchases = () => {
                         value={formData.paymentStatus}
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                        disabled={!isEditing}
+                        disabled={editingPurchaseId && !isEditing}
                       >
                         <option value="Pending">Pending</option>
                         <option value="Paid">Paid</option>
@@ -966,7 +966,7 @@ const Purchases = () => {
                             onChange={(e) => handleItemChange(index, 'part', e.target.value)}
                             className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                             required
-                            disabled={!isEditing}
+                            disabled={editingPurchaseId && !isEditing}
                           >
                             <option value="">Select a part</option>
                             {parts.map(part => (
@@ -987,7 +987,7 @@ const Purchases = () => {
                             value={item.quantity}
                             onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
                             className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            disabled={!isEditing}
+                            disabled={editingPurchaseId && !isEditing}
                           />
                         </div>
                         
@@ -1002,7 +1002,7 @@ const Purchases = () => {
                             value={item.unitPrice}
                             onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
                             className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            disabled={!isEditing}
+                            disabled={editingPurchaseId && !isEditing}
                           />
                         </div>
                         
@@ -1061,7 +1061,7 @@ const Purchases = () => {
                         value={formData.tax}
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                        disabled={!isEditing}
+                        disabled={editingPurchaseId && !isEditing}
                       />
                     </div>
                     
@@ -1077,7 +1077,7 @@ const Purchases = () => {
                         value={formData.discount}
                         onChange={handleInputChange}
                         className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                        disabled={!isEditing}
+                        disabled={editingPurchaseId && !isEditing}
                       />
                     </div>
                     
@@ -1105,7 +1105,7 @@ const Purchases = () => {
                       rows="3"
                       className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                       placeholder="Additional notes about this purchase..."
-                      disabled={!isEditing}
+                      disabled={editingPurchaseId && !isEditing}
                     ></textarea>
                   </div>
                 </div>

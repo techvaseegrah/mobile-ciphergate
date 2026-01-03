@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { exportAttendance } from '../utils/reportUtils';
 
 // Import face-api.js
 import * as faceapi from 'face-api.js';
@@ -1743,9 +1744,25 @@ const Attendance = () => {
 
       {/* Attendance Table */}
       <div className="bg-white rounded shadow overflow-hidden">
-        <div className="border-b border-gray-200 p-6">
-          <h3 className="text-lg font-semibold">Attendance Records</h3>
-          <p className="text-gray-600 mt-1">Attendance records for {formatDate(selectedDate)}</p>
+        <div className="border-b border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Attendance Records</h3>
+            <p className="text-gray-600 mt-1">Attendance records for {formatDate(selectedDate)}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportAttendance(api, 'pdf')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={() => exportAttendance(api, 'excel')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition text-sm"
+            >
+              Export Excel
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">

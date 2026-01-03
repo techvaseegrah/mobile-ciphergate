@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { exportSuppliers } from '../utils/reportUtils';
 
 const Suppliers = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -422,8 +423,22 @@ const Suppliers = () => {
       )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-xl font-semibold text-gray-800">Suppliers List ({suppliers.length})</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportSuppliers(api, 'pdf')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={() => exportSuppliers(api, 'excel')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition text-sm"
+            >
+              Export Excel
+            </button>
+          </div>
         </div>
         {suppliers.length === 0 ? (
           <div className="p-8 text-center text-gray-500">

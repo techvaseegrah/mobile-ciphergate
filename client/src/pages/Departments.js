@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { exportDepartments } from '../utils/reportUtils';
 
 const Departments = () => {
   const [departments, setDepartments] = useState([]);
@@ -171,10 +173,24 @@ const Departments = () => {
       )}
 
       <div className="bg-white rounded shadow overflow-hidden">
-        <div className="border-b border-gray-200">
-          <h3 className="p-4 text-lg font-semibold">
+        <div className="border-b border-gray-200 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h3 className="text-lg font-semibold">
             Departments List ({departments.length})
           </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportDepartments(api, 'pdf')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={() => exportDepartments(api, 'excel')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition text-sm"
+            >
+              Export Excel
+            </button>
+          </div>
         </div>
         {departments.length === 0 ? (
           <div className="p-8 text-center text-gray-500">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { exportInventory } from '../utils/reportUtils';
 
 const Inventory = () => {
   const [parts, setParts] = useState([]);
@@ -562,14 +563,30 @@ const Inventory = () => {
           <div>
             <h2 className="text-xl font-semibold text-gray-800">Parts Inventory ({parts.length})</h2>
           </div>
-          <div className="w-full md:w-auto">
-            <input
-              type="text"
-              placeholder="Search parts by name, SKU, category, or supplier..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            />
+          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+            <div className="w-full md:w-auto">
+              <input
+                type="text"
+                placeholder="Search parts by name, SKU, category, or supplier..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => exportInventory(api, 'pdf')}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+              >
+                Export PDF
+              </button>
+              <button
+                onClick={() => exportInventory(api, 'excel')}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition text-sm"
+              >
+                Export Excel
+              </button>
+            </div>
           </div>
         </div>
         {filteredParts.length === 0 ? (

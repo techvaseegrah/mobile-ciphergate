@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { exportActiveJobs } from '../utils/reportUtils';
 
 const ActiveJobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -66,8 +67,22 @@ const ActiveJobs = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-gray-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-xl font-semibold text-gray-800">Job List ({jobs.length})</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportActiveJobs(api, 'pdf')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={() => exportActiveJobs(api, 'excel')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition text-sm"
+            >
+              Export Excel
+            </button>
+          </div>
         </div>
         {jobs.length === 0 ? (
           <div className="p-8 text-center text-gray-500">

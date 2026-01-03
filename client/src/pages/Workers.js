@@ -3,6 +3,7 @@ import axios from 'axios';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { getBatches as fetchBatches } from '../utils/batchUtils';
+import { exportWorkers } from '../utils/reportUtils';
 // Function to compress image
 const compressImage = (imageDataUrl, quality = 0.7) => {
   return new Promise((resolve) => {
@@ -1389,10 +1390,24 @@ const Workers = () => {
       )}
 
       <div className="bg-white rounded shadow overflow-hidden">
-        <div className="border-b border-gray-200">
-          <h3 className="p-4 text-lg font-semibold">
+        <div className="border-b border-gray-200 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h3 className="text-lg font-semibold">
             Workers List ({workers.length})
           </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportWorkers(api, 'pdf')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition text-sm"
+            >
+              Export PDF
+            </button>
+            <button
+              onClick={() => exportWorkers(api, 'excel')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition text-sm"
+            >
+              Export Excel
+            </button>
+          </div>
         </div>
         {workers.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
