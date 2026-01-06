@@ -21,6 +21,14 @@ exports.createPart = async (req, res) => {
     const populatedPart = await Part.findById(part._id).populate('category').populate('supplier', 'name');
     res.status(201).json(populatedPart);
   } catch (err) {
+    // More detailed error handling
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ error: 'Validation Error: ' + messages.join(', ') });
+    }
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'A part with this SKU already exists' });
+    }
     res.status(500).json({ error: err.message });
   }
 };

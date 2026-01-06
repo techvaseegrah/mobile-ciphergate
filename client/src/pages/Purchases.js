@@ -28,11 +28,23 @@ const Purchases = () => {
 
   // Form state
   const [showModal, setShowModal] = useState(false);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    supplier: '',
+    cost_price: '',
+    selling_price: '',
+    stock: 1,
+    min_stock_alert: 5,
+    location: ''
+  });
   const [formData, setFormData] = useState({
     supplier: filterSupplier || '',
     purchaseDate: '',
     invoiceNumber: '',
-    items: [{ part: '', quantity: 1, unitPrice: 0 }],
+    items: [{ part: '', quantity: 1, unitPrice: 0, showSearch: false, searchTerm: '', filteredParts: [] }],
     subtotal: 0,
     tax: 0,
     discount: 0,
@@ -46,6 +58,7 @@ const Purchases = () => {
   // Dropdown data
   const [suppliers, setSuppliers] = useState([]);
   const [parts, setParts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   // Check authentication
   useEffect(() => {
@@ -66,14 +79,16 @@ const Purchases = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch suppliers and parts (always needed for form)
-      const [suppliersRes, partsRes] = await Promise.all([
+      // Fetch suppliers, parts, and categories (always needed for form)
+      const [suppliersRes, partsRes, categoriesRes] = await Promise.all([
         api.get('/suppliers'),
-        api.get('/inventory')
+        api.get('/inventory'),
+        api.get('/categories')
       ]);
 
       setSuppliers(suppliersRes.data);
       setParts(partsRes.data);
+      setCategories(categoriesRes.data);
 
       // Build query parameters
       const queryParams = new URLSearchParams();
@@ -163,7 +178,7 @@ const Purchases = () => {
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [{ part: '', quantity: 1, unitPrice: 0 }, ...prev.items]
+      items: [{ part: '', quantity: 1, unitPrice: 0, showSearch: false, searchTerm: '', filteredParts: [] }, ...prev.items]
     }));
   };
 
@@ -177,6 +192,122 @@ const Purchases = () => {
       }));
       calculateTotals(updatedItems);
     }
+  };
+
+  const handleNewProductChange = (e) => {
+    const { name, value } = e.target;
+    setNewProductForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddNewProduct = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!newProductForm.name || !newProductForm.sku || !newProductForm.category) {
+      setError('Please fill in all required fields: Name, SKU, and Category');
+      return;
+    }
+    
+    try {
+      // Prepare data for submission, ensuring proper data types
+      const submitData = {
+        name: newProductForm.name.trim(),
+        sku: newProductForm.sku.trim(),
+        category: newProductForm.category,
+        stock: Number(newProductForm.stock) || 0,
+        min_stock_alert: Number(newProductForm.min_stock_alert) || 5,
+        cost_price: Number(newProductForm.cost_price) || 0,
+        selling_price: Number(newProductForm.selling_price) || 0,
+        location: newProductForm.location,
+        supplier: newProductForm.supplier || undefined
+      };
+      
+      const response = await api.post('/inventory', submitData);
+      
+      // Add the new part to the parts list
+      setParts(prev => [...prev, response.data]);
+      
+      // Find the index of the item that triggered the add new product
+      const itemIndex = formData.items.findIndex(item => item.showAddNewProductModal);
+      if (itemIndex !== -1) {
+        // Update that specific item to select the new part
+        const updatedItems = [...formData.items];
+        updatedItems[itemIndex].part = response.data._id;
+        updatedItems[itemIndex].showAddNewProductModal = false;
+        setFormData(prev => ({ ...prev, items: updatedItems }));
+      }
+      
+      setSuccess('New product added successfully!');
+      
+      // Reset the form for adding another product
+      setNewProductForm({
+        name: '',
+        sku: '',
+        category: '',
+        supplier: '',
+        cost_price: '',
+        selling_price: '',
+        stock: 1,
+        min_stock_alert: 5,
+        location: ''
+      });
+      
+      // Close the modal after successful addition
+      setShowNewProductModal(false);
+      
+      // Reset the showAddNewProductModal flag on all items
+      const resetItems = formData.items.map(item => ({
+        ...item,
+        showAddNewProductModal: false
+      }));
+      setFormData(prev => ({ ...prev, items: resetItems }));
+    } catch (err) {
+      console.error(err);
+      // More detailed error handling
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.status === 400) {
+        setError('Invalid data provided. Please check all fields.');
+      } else if (err.response?.status === 404) {
+        setError('Category or supplier not found. Please select valid options.');
+      } else if (err.response?.status === 500) {
+        setError('Server error. The category or SKU may already exist. Please try again.');
+      } else {
+        setError('Failed to add new product. Please try again.');
+      }
+    }
+  };
+
+  const openNewProductModal = (itemIndex) => {
+    // Set the item that triggered the modal to show the add new product modal
+    const updatedItems = [...formData.items];
+    updatedItems[itemIndex].showAddNewProductModal = true;
+    setFormData(prev => ({ ...prev, items: updatedItems }));
+    setShowNewProductModal(true);
+  };
+
+  const closeNewProductModal = () => {
+    setShowNewProductModal(false);
+    // Reset the showAddNewProductModal flag on all items
+    const updatedItems = formData.items.map(item => ({
+      ...item,
+      showAddNewProductModal: false
+    }));
+    setFormData(prev => ({ ...prev, items: updatedItems }));
+    setNewProductForm({
+      name: '',
+      sku: '',
+      category: '',
+      supplier: '',
+      cost_price: '',
+      selling_price: '',
+      stock: 1,
+      min_stock_alert: 5,
+      location: ''
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -197,7 +328,7 @@ const Purchases = () => {
         supplier: '',
         purchaseDate: '',
         invoiceNumber: '',
-        items: [{ part: '', quantity: 1, unitPrice: 0 }],
+        items: [{ part: '', quantity: 1, unitPrice: 0, showSearch: false, searchTerm: '', filteredParts: [] }],
         subtotal: 0,
         tax: 0,
         discount: 0,
@@ -222,10 +353,13 @@ const Purchases = () => {
       purchaseDate: purchase.purchaseDate ? new Date(purchase.purchaseDate).toISOString().split('T')[0] : '',
       invoiceNumber: purchase.invoiceNumber || '',
       items: purchase.items.map(item => ({
-        part: item.part._id || item.part,
+        part: item.part ? (item.part._id || item.part) : '',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice
+        totalPrice: item.totalPrice,
+        showSearch: false,
+        searchTerm: '',
+        filteredParts: []
       })),
       subtotal: purchase.subtotal || 0,
       tax: purchase.tax || 0,
@@ -264,10 +398,13 @@ const Purchases = () => {
         purchaseDate: fullPurchase.purchaseDate ? new Date(fullPurchase.purchaseDate).toISOString().split('T')[0] : '',
         invoiceNumber: fullPurchase.invoiceNumber || '',
         items: fullPurchase.items.map(item => ({
-          part: item.part._id || item.part,
+          part: item.part ? (item.part._id || item.part) : '',
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice
+          totalPrice: item.totalPrice,
+          showSearch: false,
+          searchTerm: '',
+          filteredParts: []
         })),
         subtotal: fullPurchase.subtotal || 0,
         tax: fullPurchase.tax || 0,
@@ -289,10 +426,13 @@ const Purchases = () => {
         purchaseDate: purchase.purchaseDate ? new Date(purchase.purchaseDate).toISOString().split('T')[0] : '',
         invoiceNumber: purchase.invoiceNumber || '',
         items: purchase.items.map(item => ({
-          part: item.part._id || item.part,
+          part: item.part ? (item.part._id || item.part) : '',
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice
+          totalPrice: item.totalPrice,
+          showSearch: false,
+          searchTerm: '',
+          filteredParts: []
         })),
         subtotal: purchase.subtotal || 0,
         tax: purchase.tax || 0,
@@ -944,7 +1084,7 @@ const Purchases = () => {
                       <h4 className="text-md font-semibold text-gray-900 flex items-center">
                         <span className="mr-2">🔧</span> Items
                       </h4>
-                      {isEditing && (
+                      {(!editingPurchaseId || isEditing) && (
                         <button
                           type="button"
                           onClick={addItem}
@@ -961,20 +1101,104 @@ const Purchases = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
                             <span className="mr-1">⚙️</span> Part *
                           </label>
-                          <select
-                            value={item.part}
-                            onChange={(e) => handleItemChange(index, 'part', e.target.value)}
-                            className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            required
+                          <div className="relative">
+                            <select
+                              value={item.part}
+                              onChange={(e) => handleItemChange(index, 'part', e.target.value)}
+                              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                              required
+                              disabled={editingPurchaseId && !isEditing}
+                              style={{ display: item.showSearch ? 'none' : 'block' }}
+                            >
+                              <option value="">Select a part</option>
+                              {parts.map(part => (
+                                <option key={part._id} value={part._id}>
+                                  {part.name} ({part.sku})
+                                </option>
+                              ))}
+                            </select>
+                            
+                            <input
+                              type="text"
+                              placeholder="Search parts..."
+                              value={item.searchTerm || ''}
+                              onChange={(e) => {
+                                const updatedItems = [...formData.items];
+                                updatedItems[index].searchTerm = e.target.value;
+                                updatedItems[index].filteredParts = parts.filter(part =>
+                                  part.name.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                                  part.sku.toLowerCase().includes(e.target.value.toLowerCase())
+                                );
+                                setFormData(prev => ({ ...prev, items: updatedItems }));
+                              }}
+                              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                              style={{ display: item.showSearch ? 'block' : 'none' }}
+                              disabled={editingPurchaseId && !isEditing}
+                            />
+                            
+                            {item.showSearch && (
+                              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto">
+                                <div className="p-2 border-b border-gray-200 flex justify-between items-center">
+                                  <span className="text-sm font-medium text-gray-700">Search Results</span>
+                                  <button 
+                                    onClick={() => {
+                                      const updatedItems = [...formData.items];
+                                      updatedItems[index].showSearch = false;
+                                      updatedItems[index].searchTerm = '';
+                                      updatedItems[index].filteredParts = [];
+                                      setFormData(prev => ({ ...prev, items: updatedItems }));
+                                    }}
+                                    className="text-xs text-red-600 hover:text-red-800"
+                                  >
+                                    ✕ Close
+                                  </button>
+                                </div>
+                                <div className="p-2 border-b border-gray-200 bg-gray-50">
+                                  <button 
+                                    onClick={() => openNewProductModal(index)}
+                                    className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded flex items-center"
+                                  >
+                                    <span className="mr-2">➕</span> Add New Product
+                                  </button>
+                                </div>
+                                {item.filteredParts && item.filteredParts.length > 0 ? (
+                                  item.filteredParts.map(part => (
+                                    <div
+                                      key={part._id}
+                                      className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                      onClick={() => {
+                                        handleItemChange(index, 'part', part._id);
+                                        const updatedItems = [...formData.items];
+                                        updatedItems[index].showSearch = false;
+                                        updatedItems[index].searchTerm = '';
+                                        updatedItems[index].filteredParts = [];
+                                        setFormData(prev => ({ ...prev, items: updatedItems }));
+                                      }}
+                                    >
+                                      <div className="font-medium">{part.name}</div>
+                                      <div className="text-sm text-gray-500">{part.sku}</div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="p-3 text-gray-500 text-center">No parts found</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedItems = [...formData.items];
+                              updatedItems[index].showSearch = !updatedItems[index].showSearch;
+                              updatedItems[index].searchTerm = '';
+                              updatedItems[index].filteredParts = parts;
+                              setFormData(prev => ({ ...prev, items: updatedItems }));
+                            }}
+                            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
                             disabled={editingPurchaseId && !isEditing}
                           >
-                            <option value="">Select a part</option>
-                            {parts.map(part => (
-                              <option key={part._id} value={part._id}>
-                                {part.name} ({part.sku})
-                              </option>
-                            ))}
-                          </select>
+                            {item.showSearch ? 'Cancel' : 'Search & Add New'}
+                          </button>
                         </div>
                         
                         <div className="md:col-span-2">
@@ -1019,7 +1243,7 @@ const Purchases = () => {
                         </div>
                         
                         <div className="md:col-span-1 flex items-center justify-center">
-                          {isEditing && formData.items.length > 1 && (
+                          {(!editingPurchaseId || isEditing) && formData.items.length > 1 && (
                             <button
                               type="button"
                               onClick={() => removeItem(index)}
@@ -1117,12 +1341,12 @@ const Purchases = () => {
                   >
                     Cancel
                   </button>
-                  {isEditing && (
+                  {(!editingPurchaseId || isEditing) && (
                     <button
                       type="submit"
                       className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition shadow-md hover:shadow-lg"
                     >
-                      {isEditing ? 'Update Purchase' : 'Add Purchase'}
+                      {editingPurchaseId ? 'Update Purchase' : 'Add Purchase'}
                     </button>
                   )}
                 </div>
@@ -1381,6 +1605,193 @@ const Purchases = () => {
           </div>
         )}
       </div>
+      
+      {/* Add New Product Modal */}
+      {showNewProductModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 flex justify-between items-center rounded-t-xl">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                <span className="mr-2">➕</span>
+                Add New Product
+              </h2>
+              <button 
+                onClick={closeNewProductModal}
+                className="text-gray-500 hover:text-gray-700 bg-white rounded-full p-2 shadow-sm hover:shadow-md transition"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddNewProduct} className="px-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">🏷️</span> Product Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={newProductForm.name}
+                    onChange={handleNewProductChange}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="Enter product name"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">🔢</span> SKU *
+                  </label>
+                  <input
+                    type="text"
+                    name="sku"
+                    value={newProductForm.sku}
+                    onChange={handleNewProductChange}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="Enter SKU"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">📂</span> Category *
+                  </label>
+                  <select
+                    name="category"
+                    value={newProductForm.category}
+                    onChange={handleNewProductChange}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map(category => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">🚚</span> Supplier
+                  </label>
+                  <select
+                    name="supplier"
+                    value={newProductForm.supplier}
+                    onChange={handleNewProductChange}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  >
+                    <option value="">Select a supplier</option>
+                    {suppliers.map(supplier => (
+                      <option key={supplier._id} value={supplier._id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">💰</span> Cost Price (Rs)
+                  </label>
+                  <input
+                    type="number"
+                    name="cost_price"
+                    value={newProductForm.cost_price}
+                    onChange={handleNewProductChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">🏷️</span> Selling Price (Rs)
+                  </label>
+                  <input
+                    type="number"
+                    name="selling_price"
+                    value={newProductForm.selling_price}
+                    onChange={handleNewProductChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">📦</span> Initial Stock
+                  </label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={newProductForm.stock}
+                    onChange={handleNewProductChange}
+                    min="0"
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">🔔</span> Min Stock Alert
+                  </label>
+                  <input
+                    type="number"
+                    name="min_stock_alert"
+                    value={newProductForm.min_stock_alert}
+                    onChange={handleNewProductChange}
+                    min="0"
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="5"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">📍</span> Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={newProductForm.location}
+                    onChange={handleNewProductChange}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="Enter storage location"
+                  />
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={closeNewProductModal}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition shadow-md hover:shadow-lg"
+                >
+                  Add Product
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

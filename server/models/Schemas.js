@@ -92,6 +92,7 @@ const JobSchema = new Schema({
     default: 'cash' 
   },
   total_amount: Number,
+  discount_amount: { type: Number, default: 0 },
   job_card_number: String,
   status: { 
     type: String, 

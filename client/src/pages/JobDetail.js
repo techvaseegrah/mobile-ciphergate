@@ -22,6 +22,8 @@ const JobDetail = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(job?.discount_amount || '');
+  const [isEditingDiscount, setIsEditingDiscount] = useState(false);
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
@@ -51,6 +53,7 @@ const JobDetail = () => {
     try {
       const res = await api.get(`/jobs/${id}`);
       setJob(res.data);
+      setDiscountAmount(res.data.discount_amount || 0);
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -58,6 +61,13 @@ const JobDetail = () => {
       setLoading(false);
     }
   }, [id]);
+  
+  // Update discountAmount when job changes
+  useEffect(() => {
+    if (job) {
+      setDiscountAmount(job.discount_amount || '');
+    }
+  }, [job]);
 
   useEffect(() => {
     fetchJob();
@@ -214,6 +224,41 @@ const JobDetail = () => {
       setError('Failed to cancel job');
     } finally {
       setCancelling(false);
+    }
+  };
+  
+  // Update discount amount
+  const updateDiscount = async () => {
+    try {
+      setUpdating(true);
+      
+      const discountValue = (discountAmount === '' || discountAmount === null) ? 0 : parseFloat(discountAmount) || 0;
+      
+      // Validate that discount is not greater than total amount
+      const totalAmount = job.total_amount || 0;
+      if (discountValue > totalAmount) {
+        setError(`Discount cannot be greater than total amount (Rs ${totalAmount.toFixed(2)})`);
+        return;
+      }
+      
+      const response = await api.put(`/jobs/${id}/update`, {
+        discount_amount: discountValue
+      });
+      
+      if (response.data.success) {
+        setJob(response.data.job);
+        setDiscountAmount(response.data.job.discount_amount || '');
+        setSuccess('Discount updated successfully!');
+        setIsEditingDiscount(false);
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccess(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error updating discount:', err);
+      setError('Failed to update discount: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setUpdating(false);
     }
   };
   
@@ -538,6 +583,22 @@ const JobDetail = () => {
               </tbody>
             </table>
           </div>
+          
+          <!-- Discount Row -->
+          <div style="border: 1px solid #000; padding: 5px 10px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between;">
+              <div style="font-weight: bold;">Discount:</div>
+              <div style="font-weight: bold;">Rs ${(job.discount_amount || 0).toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <!-- Net Amount Row -->
+          <div style="border: 1px solid #000; padding: 5px 10px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between;">
+              <div style="font-weight: bold;">Net Amount:</div>
+              <div style="font-weight: bold;">Rs ${((job.total_amount || 0) - (job.discount_amount || 0)).toFixed(2)}</div>
+            </div>
+          </div>
 
           <!-- Accessories Check -->
           <div style="border-bottom: 1px solid #000; padding: 10px 5px; font-size: 13px; font-weight: bold;">
@@ -604,8 +665,10 @@ const JobDetail = () => {
           <!-- Footer Totals -->
           <div style="border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 10px 5px; font-size: 13px; font-weight: bold; display: flex; justify-content: space-between;">
             <div>Total Amount: Rs ${(job.total_amount || 0).toFixed(2)}</div>
+            <div>Discount: Rs ${(job.discount_amount || 0).toFixed(2)}</div>
+            <div>Net Amount: Rs ${((job.total_amount || 0) - (job.discount_amount || 0)).toFixed(2)}</div>
             <div>Advance: Rs ${(job.advance_payment || 0).toFixed(2)}</div>
-            <div>Net Amount: Rs ${((job.total_amount || 0) - (job.advance_payment || 0)).toFixed(2)}</div>
+            <div>Balance: Rs ${(((job.total_amount || 0) - (job.discount_amount || 0)) - (job.advance_payment || 0)).toFixed(2)}</div>
           </div>
 
           <!-- Declaration & Signatures -->
@@ -918,10 +981,70 @@ const JobDetail = () => {
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium">Rs {job.total_amount?.toFixed(2) || '0.00'}</p>
                 </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Discount</p>
+                    {isEditingDiscount ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">Rs</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={discountAmount || ''}
+                          onChange={(e) => setDiscountAmount(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                          onWheel={(e) => e.target.blur()}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-right hide-spinner"
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">Rs {job.discount_amount ? (job.discount_amount).toFixed(2) : '0.00'}</p>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    {isEditingDiscount && (
+                      <button
+                        onClick={() => setIsEditingDiscount(false)}
+                        className="text-sm px-2 py-1 bg-gray-500 text-white rounded"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (isEditingDiscount) {
+                          updateDiscount();
+                        } else {
+                          setIsEditingDiscount(true);
+                        }
+                      }}
+                      disabled={updating}
+                      className={`text-sm px-2 py-1 rounded ${isEditingDiscount ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'} ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isEditingDiscount ? 'Save' : 'Edit'}
+                    </button>
+                  </div>
+                </div>
+                <style>{`
+                  .hide-spinner::-webkit-outer-spin-button,
+                  .hide-spinner::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                  }
+                  .hide-spinner {
+                    -moz-appearance: textfield;
+                  }
+                `}</style>
+                <div>
+                  <p className="text-sm text-gray-500">Net Amount</p>
+                  <p className="font-medium text-green-600">
+                    Rs {((job.total_amount || 0) - (job.discount_amount || 0)).toFixed(2)}
+                  </p>
+                </div>
                 <div>
                   <p className="text-sm text-gray-500">Balance Amount</p>
                   <p className="font-medium text-blue-600">
-                    Rs {((job.total_amount || 0) - (job.advance_payment || 0)).toFixed(2)}
+                    Rs {(((job.total_amount || 0) - (job.discount_amount || 0)) - (job.advance_payment || 0)).toFixed(2)}
                   </p>
                 </div>
               </div>

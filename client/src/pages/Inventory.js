@@ -164,7 +164,7 @@ const Inventory = () => {
     
     try {
       // Prepare data for submission
-      const submitData = {
+      let submitData = {
         ...formData,
         name: formData.name.trim(),
         sku: formData.sku.trim(),
@@ -174,9 +174,14 @@ const Inventory = () => {
         selling_price: Number(formData.selling_price) || 0
       };
       
-      // Remove category field if it's empty (to avoid validation errors)
-      if (!submitData.category) {
+      // Remove empty fields to avoid validation errors
+      if (!submitData.category || submitData.category === '') {
         delete submitData.category;
+      }
+      
+      // Remove supplier field if it's empty (to avoid validation errors)
+      if (!submitData.supplier || submitData.supplier === '') {
+        delete submitData.supplier;
       }
       
       if (isEditing) {
