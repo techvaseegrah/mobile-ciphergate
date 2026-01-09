@@ -24,6 +24,24 @@ const JobDetail = () => {
   const [cancelling, setCancelling] = useState(false);
   const [discountAmount, setDiscountAmount] = useState(job?.discount_amount || '');
   const [isEditingDiscount, setIsEditingDiscount] = useState(false);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    supplier: '',
+    cost_price: '',
+    selling_price: '',
+    stock: 1,
+    min_stock_alert: 5,
+    location: ''
+  });
+  const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredParts, setFilteredParts] = useState([]);
+  const [showPartsDropdown, setShowPartsDropdown] = useState(false);
+  const partsDropdownRef = useRef(null);
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
@@ -41,6 +59,7 @@ const JobDetail = () => {
       try {
         const res = await api.get('/inventory');
         setAvailableParts(res.data);
+        setFilteredParts(res.data); // Initialize filtered parts
       } catch (err) {
         console.error('Failed to fetch parts:', err);
       }
@@ -48,6 +67,38 @@ const JobDetail = () => {
     
     fetchParts();
   }, []);
+  
+  // Fetch categories and suppliers for new product form
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [categoriesRes, suppliersRes] = await Promise.all([
+          api.get('/categories'),
+          api.get('/suppliers')
+        ]);
+        
+        setCategories(categoriesRes.data);
+        setSuppliers(suppliersRes.data);
+      } catch (err) {
+        console.error('Failed to fetch dropdown data:', err);
+      }
+    };
+    
+    fetchDropdownData();
+  }, []);
+  
+  // Update filtered parts when available parts change
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredParts(availableParts);
+    } else {
+      const filtered = availableParts.filter(part =>
+        part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        part.sku.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredParts(filtered);
+    }
+  }, [availableParts, searchTerm]);
 
   const fetchJob = useCallback(async () => {
     try {
@@ -89,6 +140,145 @@ const JobDetail = () => {
       case 'Picked Up': return 'bg-purple-100 text-purple-800';
       case 'Cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+  
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    if (value.trim() === '') {
+      setFilteredParts(availableParts);
+    } else {
+      const filtered = availableParts.filter(part =>
+        part.name.toLowerCase().includes(value.toLowerCase()) ||
+        part.sku.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredParts(filtered);
+    }
+  };
+  
+  // Toggle parts dropdown
+  const togglePartsDropdown = () => {
+    setShowPartsDropdown(!showPartsDropdown);
+    if (!showPartsDropdown) {
+      setFilteredParts(availableParts);
+      setSearchTerm('');
+    }
+  };
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (partsDropdownRef.current && !partsDropdownRef.current.contains(event.target)) {
+        setShowPartsDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Open new product modal
+  const openNewProductModal = () => {
+    setShowNewProductModal(true);
+  };
+  
+  // Close new product modal
+  const closeNewProductModal = () => {
+    setShowNewProductModal(false);
+    setNewProductForm({
+      name: '',
+      sku: '',
+      category: '',
+      supplier: '',
+      cost_price: '',
+      selling_price: '',
+      stock: 1,
+      min_stock_alert: 5,
+      location: ''
+    });
+  };
+  
+  // Handle changes in new product form
+  const handleNewProductChange = (e) => {
+    const { name, value } = e.target;
+    setNewProductForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Handle adding new product
+  const handleAddNewProduct = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!newProductForm.name || !newProductForm.sku || !newProductForm.category) {
+      setError('Please fill in all required fields: Name, SKU, and Category');
+      return;
+    }
+    
+    try {
+      // Prepare data for submission, ensuring proper data types
+      const submitData = {
+        name: newProductForm.name.trim(),
+        sku: newProductForm.sku.trim(),
+        category: newProductForm.category,
+        stock: Number(newProductForm.stock) || 0,
+        min_stock_alert: Number(newProductForm.min_stock_alert) || 5,
+        cost_price: Number(newProductForm.cost_price) || 0,
+        selling_price: Number(newProductForm.selling_price) || 0,
+        location: newProductForm.location,
+        supplier: newProductForm.supplier || undefined
+      };
+      
+      const response = await api.post('/inventory', submitData);
+      
+      // Add the new part to the available parts and filtered parts lists
+      setAvailableParts(prev => [...prev, response.data]);
+      setFilteredParts(prev => [...prev, response.data]);
+      
+      // Automatically select the newly added part
+      setNewPart(prev => ({
+        ...prev,
+        part: response.data._id
+      }));
+      
+      setSuccess('New product added successfully!');
+      
+      // Reset the form
+      setNewProductForm({
+        name: '',
+        sku: '',
+        category: '',
+        supplier: '',
+        cost_price: '',
+        selling_price: '',
+        stock: 1,
+        min_stock_alert: 5,
+        location: ''
+      });
+      
+      // Close the modal
+      setShowNewProductModal(false);
+    } catch (err) {
+      console.error(err);
+      // More detailed error handling
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.status === 400) {
+        setError('Invalid data provided. Please check all fields.');
+      } else if (err.response?.status === 404) {
+        setError('Category or supplier not found. Please select valid options.');
+      } else if (err.response?.status === 500) {
+        setError('Server error. The category or SKU may already exist. Please try again.');
+      } else {
+        setError('Failed to add new product. Please try again.');
+      }
     }
   };
   
@@ -302,7 +492,10 @@ const JobDetail = () => {
       const currentParts = job.parts_used || [];
       
       // Check if part already exists
-      const existingPartIndex = currentParts.findIndex(p => p.part._id === newPart.part);
+      const existingPartIndex = currentParts.findIndex(p => {
+        const partId = typeof p.part === 'object' ? p.part._id : p.part;
+        return partId === newPart.part;
+      });
       let updatedParts;
       
       if (existingPartIndex >= 0) {
@@ -311,11 +504,10 @@ const JobDetail = () => {
         updatedParts[existingPartIndex].quantity += parseInt(newPart.quantity);
       } else {
         // Add new part
-        const selectedPart = availableParts.find(p => p._id === newPart.part);
         updatedParts = [
           ...currentParts,
           {
-            part: selectedPart._id,
+            part: newPart.part,
             quantity: parseInt(newPart.quantity),
             price_type: newPart.price_type
           }
@@ -332,6 +524,8 @@ const JobDetail = () => {
         setSuccess('Part added successfully!');
         setShowPartsModal(false);
         setNewPart({ part: '', quantity: 1, price_type: 'Internal' });
+        setSearchTerm(''); // Clear search term
+        setFilteredParts(availableParts); // Reset filtered parts
         setTimeout(() => setSuccess(''), 5000);
       }
     } catch (err) {
@@ -1218,18 +1412,67 @@ const JobDetail = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Select Part</label>
-                  <select
-                    value={newPart.part}
-                    onChange={(e) => setNewPart({...newPart, part: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select a part</option>
-                    {availableParts.map((part) => (
-                      <option key={part._id} value={part._id}>
-                        {part.name} (SKU: {part.sku}) - Rs {part.cost_price?.toFixed(2) || '0.00'}
-                      </option>
-                    ))}
-                  </select>
+                  
+                  <div className="mb-2">
+                    <button
+                      type="button"
+                      onClick={openNewProductModal}
+                      className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded flex items-center"
+                    >
+                      <span className="mr-2">➕</span> Add New Product
+                    </button>
+                  </div>
+                  
+                  <div className="relative" ref={partsDropdownRef}>
+                    <div 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 cursor-pointer flex justify-between items-center"
+                      onClick={togglePartsDropdown}
+                    >
+                      {newPart.part ? 
+                        (() => {
+                          const selectedPart = availableParts.find(p => p._id === newPart.part);
+                          return selectedPart ? selectedPart.name + ' (SKU: ' + selectedPart.sku + ')' : 'Select a part';
+                        })()
+                        : 'Select a part'}
+                      <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    
+                    {showPartsDropdown && (
+                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                        <div className="p-2 border-b border-gray-200 bg-gray-50">
+                          <input
+                            type="text"
+                            placeholder="Search parts..."
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            className="w-full px-3 py-1 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            onClick={(e) => e.stopPropagation()} // Prevent click from bubbling up
+                          />
+                        </div>
+                        <div className="py-2">
+                          {filteredParts.length > 0 ? (
+                            filteredParts.map(part => (
+                              <div
+                                key={part._id}
+                                className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => {
+                                  setNewPart({...newPart, part: part._id});
+                                  setShowPartsDropdown(false);
+                                }}
+                              >
+                                <div className="font-medium">{part.name}</div>
+                                <div className="text-sm text-gray-500">SKU: {part.sku} - Rs {part.cost_price?.toFixed(2) || '0.00'}</div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 text-gray-500 text-center">No parts found</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div>
@@ -1273,6 +1516,180 @@ const JobDetail = () => {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add New Product Modal */}
+      {showNewProductModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Add New Product</h3>
+            </div>
+            <form onSubmit={handleAddNewProduct}>
+              <div className="px-6 py-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <span className="mr-1">🔧</span> Part Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={newProductForm.name}
+                    onChange={handleNewProductChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. iPhone 12 Screen"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <span className="mr-1">🏷️</span> SKU *
+                  </label>
+                  <input
+                    type="text"
+                    name="sku"
+                    value={newProductForm.sku}
+                    onChange={handleNewProductChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. SCR-IP12-BLK"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <span className="mr-1">📂</span> Category *
+                  </label>
+                  <select
+                    name="category"
+                    value={newProductForm.category}
+                    onChange={handleNewProductChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map(category => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <span className="mr-1">🏢</span> Supplier
+                  </label>
+                  <select
+                    name="supplier"
+                    value={newProductForm.supplier}
+                    onChange={handleNewProductChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select a supplier</option>
+                    {suppliers.map(supplier => (
+                      <option key={supplier._id} value={supplier._id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                      <span className="mr-1">💰</span> Cost Price (Rs)
+                    </label>
+                    <input
+                      type="number"
+                      name="cost_price"
+                      value={newProductForm.cost_price}
+                      onChange={handleNewProductChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                      <span className="mr-1">🏷️</span> Selling Price (Rs)
+                    </label>
+                    <input
+                      type="number"
+                      name="selling_price"
+                      value={newProductForm.selling_price}
+                      onChange={handleNewProductChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                      <span className="mr-1">📦</span> Stock Quantity
+                    </label>
+                    <input
+                      type="number"
+                      name="stock"
+                      value={newProductForm.stock}
+                      onChange={handleNewProductChange}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                      <span className="mr-1">⚠️</span> Min Stock Alert
+                    </label>
+                    <input
+                      type="number"
+                      name="min_stock_alert"
+                      value={newProductForm.min_stock_alert}
+                      onChange={handleNewProductChange}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <span className="mr-1">📍</span> Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={newProductForm.location}
+                    onChange={handleNewProductChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g. Shelf A, Bin 5"
+                  />
+                </div>
+              </div>
+              <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={closeNewProductModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Add Product
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -186,14 +186,26 @@ async uploadMedia(fileBuffer, mimeType, filename) {
         
         // Step 2: Send intro message
         console.log('💬 Step 2: Sending intro message...');
-        const introMessage = `🔧 *Device Inspection Update*\n\nHello ${customerName},\n\nWe have recorded a video showing the current condition of your device for your reference:\n\n📱 *Device:* ${deviceModel || 'Not specified'}\n🔧 *Issue:* ${deviceIssue || 'Not specified'}`;
+        const introMessage = `🔧 *Device Inspection Update*
+
+Hello ${customerName},
+
+We have recorded a video showing the current condition of your device for your reference:
+
+📱 *Device:* ${deviceModel || 'Not specified'}
+🔧 *Issue:* ${deviceIssue || 'Not specified'}`;
         
         await this.sendTextMessageInternal(formattedPhone, introMessage);
         console.log('✅ Intro message sent');
         
         // Step 3: Send the video
         console.log('🎥 Step 3: Sending video...');
-        const videoCaption = `📹 *Device Condition Video*\n\nDevice: ${deviceModel || 'Not specified'}\nIssue: ${deviceIssue || 'Not specified'}\n\nThis video shows the current condition as recorded by our technician.`;
+        const videoCaption = `📹 *Device Condition Video*
+
+Device: ${deviceModel || 'Not specified'}
+Issue: ${deviceIssue || 'Not specified'}
+
+This video shows the current condition as recorded by our technician.`;
         
         await axios.post(
           this.baseUrl,
@@ -221,7 +233,19 @@ async uploadMedia(fileBuffer, mimeType, filename) {
         
         // Step 4: Send follow-up message
         console.log('📋 Step 4: Sending follow-up message...');
-        const followUpMessage = `📋 *Next Steps:*\n\n1. Review the device condition in the video\n2. We'll proceed with repair as discussed\n3. You'll receive updates on repair progress\n4. Contact us if you have any questions\n\n📍 *Shop Address:* Sri Ramanar Mobile Service Center\n1E, Kattabomman Street, Tiruvannamalai - 606601\n📞 *Phone:* 94430 19097\n⏰ *Hours:* 9AM - 9:30PM (Closed Tuesday)\n\nThank you for choosing our service! 🙏`;
+        const followUpMessage = `📋 *Next Steps:*
+
+1. Review the device condition in the video
+2. We'll proceed with repair as discussed
+3. You'll receive updates on repair progress
+4. Contact us if you have any questions
+
+📍 *Shop Address:* Sri Ramanar Mobile Service Center
+1E, Kattabomman Street, Tiruvannamalai - 606601
+📞 *Phone:* 94430 19097
+⏰ *Hours:* 9AM - 9:30PM (Closed Tuesday)
+
+Thank you for choosing our service! 🙏`;
         
         await this.sendTextMessageInternal(formattedPhone, followUpMessage);
         console.log('✅ Follow-up message sent');
@@ -274,7 +298,14 @@ async uploadMedia(fileBuffer, mimeType, filename) {
         // If video upload succeeded but sending failed, send error message
         if (videoMediaId && !videoSent) {
           try {
-            const errorMessage = `⚠️ *Video Upload Issue*\n\nWe recorded a video but encountered an issue sending it. Please visit our shop to see the video.\n\nDevice: ${deviceModel}\nIssue: ${deviceIssue}\n\nThank you!`;
+            const errorMessage = `⚠️ *Video Upload Issue*
+
+We recorded a video but encountered an issue sending it. Please visit our shop to see the video.
+
+Device: ${deviceModel}
+Issue: ${deviceIssue}
+
+Thank you!`;
             await this.sendTextMessageInternal(formattedPhone, errorMessage);
           } catch (sendError) {
             console.error('Failed to send error message:', sendError.message);
@@ -342,7 +373,7 @@ async uploadMedia(fileBuffer, mimeType, filename) {
             {
               type: "button",
               sub_type: "quick_reply",
-              index: 0,
+              index: "0",
               parameters: [
                 {
                   type: "payload",
@@ -1198,7 +1229,11 @@ async sendDeviceVideo(req, res) {
         document: {
           id: videoMediaId,
           filename: `Device_Video_${jobCardNumber}.mp4`,
-          caption: `📱 Device Condition Video\n\nJob ID: ${jobCardNumber}\nDevice: ${deviceModel}\nCustomer: ${customerName}`
+          caption: `📱 Device Condition Video
+
+Job ID: ${jobCardNumber}
+Device: ${deviceModel}
+Customer: ${customerName}`
         }
       };
       
@@ -1232,7 +1267,11 @@ async sendDeviceVideo(req, res) {
           type: 'video',
           video: {
             id: videoMediaId,
-            caption: `📱 Device Condition Video\n\nJob ID: ${jobCardNumber}\nDevice: ${deviceModel}\nCustomer: ${customerName}`
+            caption: `📱 Device Condition Video
+
+Job ID: ${jobCardNumber}
+Device: ${deviceModel}
+Customer: ${customerName}`
           }
         };
         
@@ -1297,9 +1336,40 @@ async sendDeviceVideo(req, res) {
         let confirmMessage = '';
         
         if (sendMethod === 'document') {
-          confirmMessage = `✅ *Device Video Recorded & Sent*\n\nHello ${customerName},\n\nWe have recorded a video of your device condition.\n\n📋 *Job ID:* ${jobCardNumber}\n📱 *Device:* ${deviceModel}\n📎 *Video:* Sent as a document file\n\n*To view:*\n1. Open this chat\n2. Tap on "📎 Documents"\n3. Find "Device_Video_${jobCardNumber}.mp4"\n4. Download and play\n\nThank you! 🙏`;
+          confirmMessage = `✅ *Device Video Recorded & Sent*
+
+Hello ${customerName},
+
+We have recorded a video of your device condition.
+
+📋 *Job ID:* ${jobCardNumber}
+📱 *Device:* ${deviceModel}
+📎 *Video:* Sent as a document file
+
+*To view:*
+1. Open this chat
+2. Tap on "📎 Documents"
+3. Find "Device_Video_${jobCardNumber}.mp4"
+4. Download and play
+
+Thank you! 🙏`;
         } else {
-          confirmMessage = `✅ *Device Video Recorded & Sent*\n\nHello ${customerName},\n\nWe have recorded a video of your device condition.\n\n📋 *Job ID:* ${jobCardNumber}\n📱 *Device:* ${deviceModel}\n🎥 *Video:* Sent above this message\n\n*If video not visible:*\n1. Check "Media" tab in chat\n2. Ensure auto-download is enabled\n3. Restart WhatsApp if needed\n\nThank you! 🙏`;
+          confirmMessage = `✅ *Device Video Recorded & Sent*
+
+Hello ${customerName},
+
+We have recorded a video of your device condition.
+
+📋 *Job ID:* ${jobCardNumber}
+📱 *Device:* ${deviceModel}
+🎥 *Video:* Sent above this message
+
+*If video not visible:*
+1. Check "Media" tab in chat
+2. Ensure auto-download is enabled
+3. Restart WhatsApp if needed
+
+Thank you! 🙏`;
         }
         
         await this.sendTextMessageInternal(formattedPhone, confirmMessage);
@@ -1313,7 +1383,14 @@ async sendDeviceVideo(req, res) {
       if (sendMethod === 'document') {
         try {
           setTimeout(async () => {
-            const tipsMessage = `💡 *Video Viewing Tips:*\n\nIf you can't see the video:\n\n1. *Check Documents tab:* Look for "📎 Documents" in chat\n2. *File name:* Device_Video_${jobCardNumber}.mp4\n3. *File size:* ${(videoFile.size / 1024 / 1024).toFixed(2)}MB\n4. *Need help?* Reply "HELP" or call 94430 19097`;
+            const tipsMessage = `💡 *Video Viewing Tips:*
+
+If you can't see the video:
+
+1. *Check Documents tab:* Look for "📎 Documents" in chat
+2. *File name:* Device_Video_${jobCardNumber}.mp4
+3. *File size:* ${(videoFile.size / 1024 / 1024).toFixed(2)}MB
+4. *Need help?* Reply "HELP" or call 94430 19097`;
             
             await this.sendTextMessageInternal(formattedPhone, tipsMessage);
             console.log('✅ Troubleshooting tips sent');
@@ -1333,7 +1410,19 @@ async sendDeviceVideo(req, res) {
         
         // Try to send error message to customer
         try {
-          const errorMsg = `⚠️ *Video Sending Issue*\n\nWe recorded your device video but encountered an issue.\n\n📋 Job ID: ${jobCardNumber}\n📱 Device: ${deviceModel}\n\nPlease visit our shop to view the video:\n📍 Sri Ramanar Mobile Service Center\n1E, Kattabomman Street, Tiruvannamalai\n📞 94430 19097\n\nThank you!`;
+          const errorMsg = `⚠️ *Video Sending Issue*
+
+We recorded your device video but encountered an issue.
+
+📋 Job ID: ${jobCardNumber}
+📱 Device: ${deviceModel}
+
+Please visit our shop to view the video:
+📍 Sri Ramanar Mobile Service Center
+1E, Kattabomman Street, Tiruvannamalai
+📞 94430 19097
+
+Thank you!`;
           
           await this.sendTextMessageInternal(formattedPhone, errorMsg);
         } catch (sendError) {
@@ -1480,13 +1569,6 @@ async processIncomingMessage(message, value) {
       // Could implement chatbot responses here
     }
     
-    // Handle BUTTON REPLIES
-    else if (message.type === 'button') {
-      console.log('🔘 Button clicked:', message.button);
-      // The button payload will be in message.button.payload
-      // This is already handled by your button endpoint
-    }
-    
     // Handle INTERACTIVE REPLIES (quick replies from template buttons)
     else if (message.type === 'interactive') {
       console.log('⚡ Interactive reply:', message.interactive);
@@ -1532,11 +1614,21 @@ async handleIncomingVideo(message, from) {
     console.log(`Caption: ${videoCaption}`);
     
     // Step 1: Find the job for this customer
-    const phoneNumber = from.replace('91', ''); // Remove country code
+    // Extract phone number without country code for matching
+    let cleanFrom = from;
+    if (from.startsWith('+91')) {
+      cleanFrom = from.substring(3); // Remove +91
+    } else if (from.startsWith('91')) {
+      cleanFrom = from.substring(2); // Remove 91
+    }
+    
     const job = await Job.findOne({
-      'customer.phone': { 
-        $in: [from, phoneNumber, `+91${phoneNumber}`] 
-      },
+      $or: [
+        { 'customer.phone': from },
+        { 'customer.phone': `+91${cleanFrom}` },
+        { 'customer.phone': `91${cleanFrom}` },
+        { 'customer.phone': cleanFrom }
+      ],
       whatsapp_button_clicks: { 
         $elemMatch: { 
           button: 'record_device_video' 

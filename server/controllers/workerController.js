@@ -215,32 +215,46 @@ exports.recordAttendance = async (req, res) => {
       });
     }
     
-    // Validate location if provided
+    // Validate location if provided, but skip for face and rfid methods (admin attendance)
     console.log('Location data received:', { latitude, longitude });
     console.log('Admin location settings:', admin.locationSettings);
+    console.log('Method:', method);
     
-    if (latitude !== undefined && longitude !== undefined) {
-      const workerLocation = { latitude, longitude };
-      const isAdminLocationValid = isWithinAllowedLocation(admin.locationSettings, workerLocation);
-      
-      if (!isAdminLocationValid) {
-        console.log('Worker is outside allowed location');
-        return res.status(400).json({ 
-          success: false, 
-          message: 'You are outside the allowed attendance location' 
-        });
-      } else {
-        console.log('Worker is within allowed location');
-      }
-    } else if (admin.locationSettings.enabled) {
-      // Location is required but not provided
-      console.log('Location is required but not provided');
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Location permission is required to mark attendance' 
-      });
+    // Check if method is face or rfid (admin attendance) to skip location validation
+    const isAdminAttendance = method === 'face' || method === 'rfid';
+    console.log('Is admin attendance (face/rfid):', isAdminAttendance);
+    console.log('Method comparison - face:', method === 'face', 'rfid:', method === 'rfid');
+    
+    if (isAdminAttendance) {
+      console.log('Location validation skipped for admin attendance (face/rfid method)');
     } else {
-      console.log('Location validation skipped (not enabled or not provided)');
+      // Only validate location for non-admin attendance methods
+      console.log('Processing location validation for non-admin attendance');
+      if (admin.locationSettings && admin.locationSettings.enabled) {
+        if (latitude !== undefined && longitude !== undefined) {
+          const workerLocation = { latitude, longitude };
+          const isAdminLocationValid = isWithinAllowedLocation(admin.locationSettings, workerLocation);
+          
+          if (!isAdminLocationValid) {
+            console.log('Worker is outside allowed location');
+            return res.status(400).json({ 
+              success: false, 
+              message: 'You are outside the allowed attendance location' 
+            });
+          } else {
+            console.log('Worker is within allowed location');
+          }
+        } else {
+          // Location is required but not provided
+          console.log('Location is required but not provided');
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Location permission is required to mark attendance' 
+          });
+        }
+      } else {
+        console.log('Location validation skipped (not enabled or not configured)');
+      }
     }
     
     // Check if worker is on cooldown (last punch was within 1 minute)

@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { getBatches as fetchBatches } from '../utils/batchUtils';
 import { exportWorkers } from '../utils/reportUtils';
+import * as faceapi from 'face-api.js';
 // Function to compress image
 const compressImage = (imageDataUrl, quality = 0.7) => {
   return new Promise((resolve) => {
@@ -82,6 +83,10 @@ const Workers = () => {
   const [faceImages, setFaceImages] = useState([]); // Array to store multiple face images
   const [capturing, setCapturing] = useState(false);
   const [captureCompleted, setCaptureCompleted] = useState(false); // Track if capture session is completed
+  const [faceDetectionActive, setFaceDetectionActive] = useState(false); // Track if face detection is active
+  const [faceDetected, setFaceDetected] = useState(false); // Track if a face is currently detected
+  const [faceQualityScore, setFaceQualityScore] = useState(0); // Quality score for face position and clarity
+  const [faceDetectionStatus, setFaceDetectionStatus] = useState(''); // Status message for face detection
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   
@@ -363,6 +368,10 @@ const Workers = () => {
             if (videoRef.current) {
               videoRef.current.srcObject = stream;
               setCapturing(true);
+              // Start face detection after camera access
+              setTimeout(() => {
+                setFaceDetectionActive(true);
+              }, 1000);
             }
           })
           .catch(err => {
@@ -374,6 +383,10 @@ const Workers = () => {
                 if (videoRef.current) {
                   videoRef.current.srcObject = stream;
                   setCapturing(true);
+                  // Start face detection after camera access
+                  setTimeout(() => {
+                    setFaceDetectionActive(true);
+                  }, 1000);
                 }
               })
               .catch(fallbackErr => {
@@ -391,6 +404,95 @@ const Workers = () => {
       }
     }, 100);
   };
+  
+  // Function to calculate face quality score
+  const calculateFaceQuality = (detection, videoElement) => {
+    if (!detection || !videoElement) return 0;
+    
+    const box = detection.detection.box;
+    const videoWidth = videoElement.videoWidth;
+    const videoHeight = videoElement.videoHeight;
+    
+    // Calculate face size relative to video dimensions
+    const faceWidthRatio = box.width / videoWidth;
+    const faceHeightRatio = box.height / videoHeight;
+    
+    // Calculate face position (should be roughly centered)
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    const xCenterRatio = Math.abs(centerX - videoWidth / 2) / (videoWidth / 2);
+    const yCenterRatio = Math.abs(centerY - videoHeight / 2) / (videoHeight / 2);
+    
+    // Quality factors:
+    // - Face size should be between 20% and 60% of video
+    const sizeFactor = Math.min(1, Math.max(0, (Math.min(faceWidthRatio, faceHeightRatio) - 0.2) / 0.4));
+    // - Face should be centered (closer to center is better)
+    const centerFactor = Math.max(0, 1 - Math.sqrt(xCenterRatio * xCenterRatio + yCenterRatio * yCenterRatio));
+    
+    // Combined quality score (0-1 scale)
+    const qualityScore = (sizeFactor * 0.6 + centerFactor * 0.4);
+    
+    return Math.round(qualityScore * 100);
+  };
+  
+  // Function to detect faces in video
+  const detectFaceInVideo = async () => {
+    if (!videoRef.current || !faceDetectionActive) return;
+    
+    try {
+      const detections = await faceapi.detectSingleFace(videoRef.current)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+        
+      if (detections) {
+        const qualityScore = calculateFaceQuality(detections, videoRef.current);
+        setFaceDetected(true);
+        setFaceQualityScore(qualityScore);
+        
+        if (qualityScore >= 70) {
+          setFaceDetectionStatus('Good face position detected! Ready to capture.');
+        } else if (qualityScore >= 50) {
+          setFaceDetectionStatus('Face detected, adjust position for better quality.');
+        } else {
+          setFaceDetectionStatus('Please position your face in the center and closer to the camera.');
+        }
+      } else {
+        setFaceDetected(false);
+        setFaceQualityScore(0);
+        setFaceDetectionStatus('No face detected. Please position your face in front of the camera.');
+      }
+    } catch (error) {
+      console.error('Error detecting face:', error);
+    }
+  };
+  
+  // Load face-api models
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
+        await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+        console.log('Face API models loaded successfully');
+      } catch (error) {
+        console.error('Error loading face API models:', error);
+      }
+    };
+    
+    loadModels();
+  }, []);
+  
+  // Start face detection when capturing
+  useEffect(() => {
+    if (capturing && faceDetectionActive && videoRef.current && videoRef.current.readyState === 4) {
+      // Start face detection interval
+      const detectionInterval = setInterval(detectFaceInVideo, 300); // Detect every 300ms
+      
+      return () => {
+        clearInterval(detectionInterval);
+      };
+    }
+  }, [capturing, faceDetectionActive]);
 
   const captureFace = () => {
     // Check if videoRef and canvasRef are available
@@ -427,6 +529,8 @@ const Workers = () => {
       if (newImages.length >= 4) {
         setCapturing(false);
         setCaptureCompleted(true);
+        // Stop face detection when we're done
+        setFaceDetectionActive(false);
       }
       return newImages;
     });
@@ -462,6 +566,10 @@ const Workers = () => {
     // Close the face capture modal and keep the captured images
     setShowFaceCapture(false);
     setCaptureCompleted(false);
+    setFaceDetectionActive(false); // Stop face detection
+    setFaceDetected(false);
+    setFaceQualityScore(0);
+    setFaceDetectionStatus('');
     
     // Stop any active video streams
     try {
@@ -479,6 +587,10 @@ const Workers = () => {
     setShowFaceCapture(false);
     setCapturing(false);
     setCaptureCompleted(false);
+    setFaceDetectionActive(false); // Stop face detection
+    setFaceDetected(false);
+    setFaceQualityScore(0);
+    setFaceDetectionStatus('');
     setFaceImages([]); // Clear images when canceling
     
     // Stop any active video streams
@@ -1218,11 +1330,44 @@ const Workers = () => {
                       id="face-capture-video" // Add an ID for direct access
                     />
                     <canvas ref={canvasRef} className="hidden" />
+                    {/* Visual feedback for face position */}
+                    {faceDetected && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div 
+                          className={`rounded-full border-2 ${faceQualityScore >= 70 ? 'border-green-500' : faceQualityScore >= 50 ? 'border-yellow-500' : 'border-red-500'}`}
+                          style={{
+                            width: `${Math.min(80, Math.max(40, faceQualityScore * 0.6))}%`,
+                            height: `${Math.min(80, Math.max(40, faceQualityScore * 0.6))}%`,
+                            maxWidth: '250px',
+                            maxHeight: '250px'
+                          }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Face detection status */}
+                  <div className="mb-4">
+                    <p className={`font-medium ${faceQualityScore >= 70 ? 'text-green-600' : faceQualityScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {faceDetectionStatus || 'Initializing face detection...'}
+                    </p>
+                    {faceDetected && (
+                      <div className="mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className={`h-2.5 rounded-full ${faceQualityScore >= 70 ? 'bg-green-600' : faceQualityScore >= 50 ? 'bg-yellow-500' : 'bg-red-600'}`}
+                            style={{ width: `${faceQualityScore}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Face Quality: {faceQualityScore}%</p>
+                      </div>
+                    )}
+                  </div>
+                  
                   <button
                     onClick={captureFace}
-                    disabled={!capturing}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                    disabled={!capturing || faceQualityScore < 60}
+                    className={`px-4 py-2 rounded-lg font-semibold transition ${faceQualityScore >= 60 ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
                     Capture Face {faceImages.length + 1}/4
                   </button>

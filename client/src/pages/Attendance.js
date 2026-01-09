@@ -615,19 +615,10 @@ const Attendance = () => {
                       // Send attendance record request with workerId
                       const attendanceData = {
                         workerId: identifiedWorkerId,
-                        method: 'face'
+                        method: 'face' // Face method for admin attendance - will skip location validation
                       };
 
-                      // Get current location if location restriction is enabled
-                      try {
-                        const location = await getCurrentLocation();
-                        attendanceData.latitude = location.latitude;
-                        attendanceData.longitude = location.longitude;
-                      } catch (locationError) {
-                        console.warn('Could not get location:', locationError);
-                        // We'll still proceed with attendance but without location data
-                        // The backend will handle the case where location is required but not provided
-                      }
+                      // Location is not required for face attendance from admin page
 
                       console.log('Recording attendance for worker:', identifiedWorkerId);
                       const response = await api.post('/workers/attendance', attendanceData);
@@ -1069,27 +1060,14 @@ const Attendance = () => {
         method: isPunchIn ? 'checkIn' : 'checkOut'
       });
       
-      // Get current location if location restriction is enabled
-      try {
-        const location = await getCurrentLocation();
-        // Add location data to the request
-        const requestData = {
-          rfid: workerForPunch.rfid,
-          method: isPunchIn ? 'checkIn' : 'checkOut',
-          latitude: location.latitude,
-          longitude: location.longitude
-        };
-        
-        var response = await api.post('/workers/attendance', requestData);
-      } catch (locationError) {
-        console.warn('Could not get location:', locationError);
-        // Proceed with attendance without location data
-        // The backend will handle the case where location is required but not provided
-        var response = await api.post('/workers/attendance', {
-          rfid: workerForPunch.rfid,
-          method: isPunchIn ? 'checkIn' : 'checkOut'
-        });
-      }
+      // For RFID method from admin page, don't require location
+      // The backend will skip location validation for RFID method
+      const requestData = {
+        rfid: workerForPunch.rfid,
+        method: 'rfid'
+      };
+      
+      var response = await api.post('/workers/attendance', requestData);
       
       // Check if we have a valid response
       if (!response || !response.data) {
