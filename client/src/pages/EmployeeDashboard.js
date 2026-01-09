@@ -35,7 +35,17 @@ const EmployeeDashboard = () => {
   const fetchWorkerData = useCallback(async () => {
     try {
       const res = await axios.get(`/api/workers/${id}`);
-      setWorker(res.data);
+      const freshWorkerData = res.data;
+      setWorker(freshWorkerData);
+      
+      // Update localStorage with fresh data to ensure RFID and other fields are stored
+      const storedEmployee = localStorage.getItem('employee');
+      if (storedEmployee) {
+        const parsedStoredWorker = JSON.parse(storedEmployee);
+        // Merge fresh data with stored data to keep any additional fields that might be needed
+        const updatedWorkerData = { ...parsedStoredWorker, ...freshWorkerData };
+        localStorage.setItem('employee', JSON.stringify(updatedWorkerData));
+      }
     } catch (err) {
       console.error(err);
       setError('Failed to fetch worker data');
@@ -63,15 +73,15 @@ const EmployeeDashboard = () => {
       return;
     }
 
-    // Get worker data from localStorage
+    // Get worker data from localStorage (for initial render)
     const storedWorker = localStorage.getItem('employee');
     if (storedWorker) {
       const parsedWorker = JSON.parse(storedWorker);
       setWorker(parsedWorker);
-    } else {
-      // If no worker data in localStorage, fetch from API
-      fetchWorkerData();
     }
+    
+    // Always fetch fresh worker data from API to ensure all fields (including RFID) are included
+    fetchWorkerData();
     
     // Fetch jobs for this specific worker
     fetchJobs();
@@ -442,18 +452,16 @@ const EmployeeDashboard = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
-      <div className="flex-1">
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-6xl mx-auto p-4">
         {/* Header */}
         <div className="bg-white shadow">
-          <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="px-4 py-4">
             <h1 className="text-xl font-bold text-gray-900">Employee Dashboard</h1>
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto p-4">
+        <div className="p-4">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-white rounded-lg shadow p-6">
@@ -524,6 +532,10 @@ const EmployeeDashboard = () => {
                 <p className="font-semibold">
                   {worker?.department ? worker.department.name : 'Not Assigned'}
                 </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">RFID</p>
+                <p className="font-semibold">{worker?.rfid || 'N/A'}</p>
               </div>
             </div>
           </div>

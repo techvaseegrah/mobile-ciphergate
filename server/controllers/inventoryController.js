@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 // GET /api/inventory: Fetch all parts (sort by name) with populated category and supplier
 exports.getAllParts = async (req, res) => {
   try {
-    const parts = await Part.find().populate('category').populate('supplier', 'name').sort({ name: 1 });
+    const parts = await Part.find({}).select('name sku category supplier compatible_models stock min_stock_alert cost_price selling_price location createdAt updatedAt').populate('category').populate('supplier', 'name').sort({ name: 1 });
     res.json(parts);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -18,7 +18,7 @@ exports.createPart = async (req, res) => {
     await part.save();
     
     // Populate category and supplier before sending response
-    const populatedPart = await Part.findById(part._id).populate('category').populate('supplier', 'name');
+    const populatedPart = await Part.findById(part._id).select('name sku category supplier compatible_models stock min_stock_alert cost_price selling_price location createdAt updatedAt').populate('category').populate('supplier', 'name');
     res.status(201).json(populatedPart);
   } catch (err) {
     // More detailed error handling
@@ -60,7 +60,7 @@ exports.updatePart = async (req, res) => {
     }
     
     // Populate category and supplier before sending response
-    const populatedPart = await Part.findById(updatedPart._id).populate('category').populate('supplier', 'name');
+    const populatedPart = await Part.findById(updatedPart._id).select('name sku category supplier compatible_models stock min_stock_alert cost_price selling_price location createdAt updatedAt').populate('category').populate('supplier', 'name');
     res.json(populatedPart);
   } catch (err) {
     console.error('Error updating part:', err);

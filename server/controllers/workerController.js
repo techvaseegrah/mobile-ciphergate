@@ -180,7 +180,8 @@ exports.loginWorker = async (req, res) => {
       name: worker.name,
       email: worker.email,
       role: worker.role,
-      department: worker.department
+      department: worker.department,
+      rfid: worker.rfid
     };
     
     res.json({ worker: workerData, message: 'Login successful' });

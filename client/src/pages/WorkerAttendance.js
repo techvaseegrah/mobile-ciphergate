@@ -30,12 +30,14 @@ const WorkerAttendance = () => {
   
   // Face recognition states
   const [faceDetectionStatus, setFaceDetectionStatus] = useState('idle');
+  const [faceError, setFaceError] = useState('');
   const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const detectionIntervalRef = useRef(null);
   const workerDescriptorsRef = useRef([]);
+  const cooldownIntervalRef = useRef(null);
   
   // RFID states
   const [rfidInput, setRfidInput] = useState('');
@@ -54,6 +56,17 @@ const WorkerAttendance = () => {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+  
+  // Cleanup function to clear intervals
+  useEffect(() => {
+    return () => {
+      // Clear any active cooldown timers
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+        cooldownIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Haversine formula to calculate distance between two points
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -88,6 +101,35 @@ const WorkerAttendance = () => {
       minute: '2-digit'
     });
   };
+  
+  // Function to group attendance records by date and maintain proper in/out pairs
+  const groupAttendanceByDate = (records) => {
+    if (!records || !Array.isArray(records)) return {};
+    
+    const grouped = {};
+    records.forEach(record => {
+      const dateKey = new Date(record.date).toDateString();
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      
+      // Add the complete record as a pair (or partial pair)
+      grouped[dateKey].push(record);
+    });
+    
+    // Sort each day's records by date/time
+    Object.keys(grouped).forEach(dateKey => {
+      grouped[dateKey].sort((a, b) => {
+        const timeA = new Date(a.checkIn || a.checkOut || a.date);
+        const timeB = new Date(b.checkIn || b.checkOut || b.date);
+        return timeA - timeB; // Sort by time ascending
+      });
+    });
+    
+    return grouped;
+  };
+  
+
 
   // Calculate duration between check-in and check-out
   const calculateDuration = (checkIn, checkOut) => {
@@ -108,6 +150,7 @@ const WorkerAttendance = () => {
   const closeFaceModal = useCallback(() => {
     setShowFaceModal(false);
     setFaceDetectionStatus('idle');
+    setFaceError('');
     workerDescriptorsRef.current = [];
     
     // Clean up video stream
@@ -139,10 +182,19 @@ const WorkerAttendance = () => {
       
       // Process attendance records
       if (workerData.attendanceRecords && Array.isArray(workerData.attendanceRecords)) {
-        // Sort by date descending (latest first)
-        const sortedRecords = [...workerData.attendanceRecords].sort((a, b) => 
-          new Date(b.date) - new Date(a.date)
-        );
+        // Sort by date and time descending (latest first)
+        const sortedRecords = [...workerData.attendanceRecords].sort((a, b) => {
+          // Sort primarily by date
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateB - dateA; // Sort by date descending
+          }
+          // If same date, sort by checkIn time first, then checkOut time
+          const timeA = new Date(a.checkIn || a.checkOut || a.date);
+          const timeB = new Date(b.checkIn || b.checkOut || b.date);
+          return timeB - timeA; // Sort by time descending
+        });
         setAttendanceRecords(sortedRecords);
       }
     } catch (err) {
@@ -227,6 +279,10 @@ const WorkerAttendance = () => {
     }
   }, []);
 
+  // State for cooldown timer
+  const [cooldownRemainingTime, setCooldownRemainingTime] = useState(0);
+  const [isCooldownActive, setIsCooldownActive] = useState(false);
+  
   // Record face attendance
   const recordFaceAttendance = useCallback(async () => {
     try {
@@ -237,7 +293,62 @@ const WorkerAttendance = () => {
       setSuccess('Attendance recorded successfully!');
     } catch (err) {
       console.error('Error recording attendance:', err);
-      setError('Failed to record attendance');
+      if (err.response?.data?.reason === 'COOLDOWN_ACTIVE') {
+        const remainingTime = err.response.data.remainingTime;
+        setCooldownRemainingTime(remainingTime);
+        setIsCooldownActive(true);
+        
+        // Update UI to reflect cooldown state
+        setFaceError(`Please wait ${remainingTime} seconds before next punch`);
+        setFaceDetectionStatus('cooldown');
+        
+        // Clear the face detection interval to stop face recognition during cooldown
+        if (detectionIntervalRef.current) {
+          clearInterval(detectionIntervalRef.current);
+          detectionIntervalRef.current = null;
+        }
+        
+        // Start countdown timer
+        if (cooldownIntervalRef.current) {
+          clearInterval(cooldownIntervalRef.current);
+        }
+        cooldownIntervalRef.current = setInterval(() => {
+          setCooldownRemainingTime(prevTime => {
+            const newTime = prevTime - 1;
+            if (newTime <= 0) {
+              if (cooldownIntervalRef.current) {
+                clearInterval(cooldownIntervalRef.current);
+                cooldownIntervalRef.current = null;
+              }
+              setIsCooldownActive(false);
+              setFaceDetectionStatus('camera_ready');
+              setFaceError('');
+              
+              // Restart face detection after cooldown ends
+              setTimeout(() => {
+                if (faceModelsLoaded && worker && !isCooldownActive) {
+                  // Restart face detection if still in the right state
+                  if (faceDetectionStatus === 'camera_ready' || faceDetectionStatus === 'detecting') {
+                    if (detectionIntervalRef.current) {
+                      clearInterval(detectionIntervalRef.current);
+                    }
+                    detectionIntervalRef.current = setInterval(detectFace, 100);
+                    setFaceDetectionStatus('detecting');
+                  }
+                }
+              }, 100); // Small delay to ensure state is settled
+              
+              return 0;
+            }
+            // Update error message with new remaining time
+            setFaceError(`Please wait ${newTime} seconds before next punch`);
+            return newTime;
+          });
+        }, 1000);
+      } else {
+        setError('Failed to record attendance');
+        setFaceError('Failed to record attendance');
+      }
     }
   }, [worker]);
 
@@ -255,7 +366,35 @@ const WorkerAttendance = () => {
       fetchAttendanceRecords(worker._id);
     } catch (err) {
       console.error('Error recording RFID attendance:', err);
-      setError('Failed to record attendance');
+      if (err.response?.data?.reason === 'COOLDOWN_ACTIVE') {
+        const remainingTime = err.response.data.remainingTime;
+        setCooldownRemainingTime(remainingTime);
+        setError(`Please wait ${remainingTime} seconds before next punch`);
+        setIsCooldownActive(true);
+        
+        // Start countdown timer
+        if (cooldownIntervalRef.current) {
+          clearInterval(cooldownIntervalRef.current);
+        }
+        cooldownIntervalRef.current = setInterval(() => {
+          setCooldownRemainingTime(prevTime => {
+            const newTime = prevTime - 1;
+            if (newTime <= 0) {
+              if (cooldownIntervalRef.current) {
+                clearInterval(cooldownIntervalRef.current);
+                cooldownIntervalRef.current = null;
+              }
+              setIsCooldownActive(false);
+              setError('');
+              return 0;
+            }
+            setError(`Please wait ${newTime} seconds before next punch`);
+            return newTime;
+          });
+        }, 1000);
+      } else {
+        setError('Failed to record attendance');
+      }
     }
   }, [worker, fetchAttendanceRecords, closeRFIDModal]);
 
@@ -276,30 +415,131 @@ const WorkerAttendance = () => {
     }
   }, [rfidInput, recordRFIDAttendance]);
 
-  // Detect face
+  // Draw circular frame on canvas
+  const drawFrame = (canvas) => {
+    if (!canvas) return;
+      
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(canvas.width, canvas.height) * 0.3;
+      
+    // Clear previous frame
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+    // Draw circular frame
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+      
+    // Draw center marker
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+    ctx.fill();
+  };
+  
+  // Check if face is within the circular frame
+  const isFaceInFrame = (detection, canvas) => {
+    if (!detection || !canvas) return false;
+      
+    const box = detection.detection || detection.box;
+    const canvasCenterX = canvas.width / 2;
+    const canvasCenterY = canvas.height / 2;
+    const frameRadius = Math.min(canvas.width, canvas.height) * 0.3;
+      
+    // Calculate face center
+    const faceCenterX = box.x + box.width / 2;
+    const faceCenterY = box.y + box.height / 2;
+      
+    // Calculate distance from face center to canvas center
+    const distance = Math.sqrt(
+      Math.pow(faceCenterX - canvasCenterX, 2) + 
+      Math.pow(faceCenterY - canvasCenterY, 2)
+    );
+      
+    // Check if face is within the circular frame with size requirements
+    return distance <= frameRadius && 
+           box.width >= canvas.width * 0.25 &&
+           box.height >= canvas.height * 0.25 &&
+           box.width <= canvas.width * 0.7 &&
+           box.height <= canvas.height * 0.7;
+  };
+    
+  // Detect face with quality validation
   const detectFace = useCallback(async () => {
+    // Check if we're currently in cooldown
+    if (isCooldownActive) {
+      return; // Don't attempt to detect face during cooldown
+    }
+      
     if (!videoRef.current || !canvasRef.current || workerDescriptorsRef.current.length === 0) {
       return;
     }
-    
+      
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+      
     try {
-      const detections = await faceapi.detectAllFaces(videoRef.current)
-        .withFaceLandmarks()
-        .withFaceDescriptors();
+      // Get video dimensions
+      const displaySize = { 
+        width: video.videoWidth || video.width || 640, 
+        height: video.videoHeight || video.height || 480 
+      };
         
-      if (detections.length > 0) {
+      // Set canvas dimensions
+      canvas.width = displaySize.width;
+      canvas.height = displaySize.height;
+        
+      // Draw circular frame
+      drawFrame(canvas);
+        
+      // Detect face
+      const detections = await faceapi
+        .detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ 
+          minConfidence: 0.7,
+          maxResults: 1
+        }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+        
+      if (detections) {
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+          
+        // Check if face is within the circular frame
+        if (!isFaceInFrame(resizedDetections, canvas)) {
+          setFaceError('Please position your face within the circular frame.');
+          return;
+        } else {
+          setFaceError(''); // Clear error when face is properly positioned
+        }
+          
+        // Draw face detection
+        try {
+          faceapi.draw.drawDetections(canvas, resizedDetections);
+          faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+        } catch (drawError) {
+          console.warn('Error drawing face detection:', drawError);
+        }
+          
         // Compare with stored descriptors
         const faceMatcher = new faceapi.FaceMatcher(workerDescriptorsRef.current);
-        const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
-        
+        const bestMatch = faceMatcher.findBestMatch(detections.descriptor);
+          
         if (bestMatch.label !== 'unknown' && bestMatch.distance < 0.6) {
           // Face recognized, record attendance
+          // Clear the detection interval to prevent multiple triggers
+          if (detectionIntervalRef.current) {
+            clearInterval(detectionIntervalRef.current);
+            detectionIntervalRef.current = null;
+          }
           setFaceDetectionStatus('recognized');
-          clearInterval(detectionIntervalRef.current);
-          
+                  
           // Record attendance
           await recordFaceAttendance();
-          
+                  
           // Close modal after delay
           setTimeout(() => {
             closeFaceModal();
@@ -307,28 +547,32 @@ const WorkerAttendance = () => {
             fetchAttendanceRecords(worker._id);
           }, 2000);
         }
+      } else {
+        setFaceError('No face detected. Please position your face within the frame.');
       }
     } catch (err) {
       console.error('Error during face detection:', err);
+      setFaceError('Error detecting face. Please try again.');
     }
-  }, [worker, fetchAttendanceRecords, recordFaceAttendance, closeFaceModal]);
+  }, [worker, fetchAttendanceRecords, recordFaceAttendance, closeFaceModal, isCooldownActive]);
 
   // Start face recognition
   const startFaceRecognition = useCallback(async () => {
     if (!faceModelsLoaded || !worker) return;
-    
+      
     try {
       setFaceDetectionStatus('camera_ready');
-      
+      setFaceError(''); // Clear any previous errors
+        
       // Get worker's face data
       const faceDataRes = await api.get(`/workers/${worker._id}/face-data`);
       const faceImages = faceDataRes.data.faceImages || [];
-      
+        
       if (!faceImages || faceImages.length === 0) {
         setFaceDetectionStatus('error');
         return;
       }
-      
+        
       // Load face descriptors
       const descriptors = [];
       for (const imageData of faceImages) {
@@ -337,7 +581,7 @@ const WorkerAttendance = () => {
         await new Promise(resolve => {
           img.onload = resolve;
         });
-        
+          
         const detection = await faceapi.detectSingleFace(img)
           .withFaceLandmarks()
           .withFaceDescriptor();
@@ -346,19 +590,19 @@ const WorkerAttendance = () => {
           descriptors.push(detection.descriptor);
         }
       }
-      
+        
       workerDescriptorsRef.current = descriptors;
-      
+        
       // Access camera
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'user' } 
       });
-      
+        
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setFaceDetectionStatus('detecting');
-        
+          
         // Start detection interval
         detectionIntervalRef.current = setInterval(detectFace, 100);
       }
@@ -408,7 +652,7 @@ const WorkerAttendance = () => {
 
   // Effect to start face recognition when modal opens and models are loaded
   useEffect(() => {
-    if (showFaceModal && faceModelsLoaded && faceDetectionStatus === 'loading') {
+    if (showFaceModal && faceModelsLoaded && (faceDetectionStatus === 'loading' || faceDetectionStatus === 'camera_ready')) {
       startFaceRecognition();
     }
   }, [showFaceModal, faceModelsLoaded, faceDetectionStatus, startFaceRecognition]);
@@ -418,6 +662,22 @@ const WorkerAttendance = () => {
     if (!locationValid) return;
     setShowFaceModal(true);
     setFaceDetectionStatus('loading');
+    
+    // If models aren't loaded yet, trigger loading
+    if (!faceModelsLoaded) {
+      const loadModels = async () => {
+        try {
+          await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
+          await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+          await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+          setFaceModelsLoaded(true);
+        } catch (err) {
+          console.error('Error loading face models:', err);
+          setFaceDetectionStatus('error');
+        }
+      };
+      loadModels();
+    }
   };
 
   // Handle RFID Attendance button click
@@ -430,9 +690,8 @@ const WorkerAttendance = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-100">
-        <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <div className="flex-1 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-6xl mx-auto p-4 flex items-center justify-center">
           <div className="text-xl">Loading attendance data...</div>
         </div>
       </div>
@@ -441,9 +700,8 @@ const WorkerAttendance = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-gray-100">
-        <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <div className="flex-1 md:ml-0 lg:ml-64 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-6xl mx-auto p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -467,13 +725,11 @@ const WorkerAttendance = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <EmployeeSidebar worker={worker} onLogout={handleLogout} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
-      <div className="flex-1">
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-6xl mx-auto p-4">
         {/* Header */}
         <div className="bg-white shadow">
-          <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Attendance</h1>
@@ -554,46 +810,124 @@ const WorkerAttendance = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In Time</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Out Time</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {attendanceRecords.map((record, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatDate(record.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatTime(record.checkIn)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatTime(record.checkOut)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {calculateDuration(record.checkIn, record.checkOut)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            record.method === 'face' 
-                              ? 'bg-green-100 text-green-800' 
-                              : record.method === 'rfid' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {record.method === 'face' ? 'Face' : record.method === 'rfid' ? 'RFID' : record.method}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Group records by date */}
+                {(() => {
+                  const groupedRecords = groupAttendanceByDate(attendanceRecords);
+                  const sortedDates = Object.keys(groupedRecords).sort((a, b) => new Date(b) - new Date(a));
+                  
+                  return (
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In Time</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Out Time</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Methods Used</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {sortedDates.map(dateStr => {
+                          const dailyRecords = groupedRecords[dateStr];
+                          
+                          // Collect all check-in and check-out times for the day
+                          const allCheckIns = [];
+                          const allCheckOuts = [];
+                          const allMethods = new Set();
+                          
+                          dailyRecords.forEach(record => {
+                            if (record.checkIn) {
+                              allCheckIns.push({ time: record.checkIn, method: record.method });
+                              allMethods.add(record.method);
+                            }
+                            if (record.checkOut) {
+                              allCheckOuts.push({ time: record.checkOut, method: record.method });
+                              allMethods.add(record.method);
+                            }
+                          });
+                          
+                          // Sort times chronologically
+                          allCheckIns.sort((a, b) => new Date(a.time) - new Date(b.time));
+                          allCheckOuts.sort((a, b) => new Date(a.time) - new Date(b.time));
+                          
+                          // Calculate duration based on paired check-ins and check-outs
+                          let totalMilliseconds = 0;
+                          for (let i = 0; i < Math.min(allCheckIns.length, allCheckOuts.length); i++) {
+                            const inTime = new Date(allCheckIns[i].time);
+                            const outTime = new Date(allCheckOuts[i].time);
+                            if (outTime > inTime) {
+                              totalMilliseconds += outTime - inTime;
+                            }
+                          }
+                          
+                          const totalSeconds = Math.floor(totalMilliseconds / 1000);
+                          const hours = Math.floor(totalSeconds / 3600);
+                          const minutes = Math.floor((totalSeconds % 3600) / 60);
+                          const seconds = totalSeconds % 60;
+                          const dailyDuration = `${hours}h ${minutes}m ${seconds}s`;
+                          
+                          return (
+                            <tr key={dateStr}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {formatDate(new Date(dateStr))}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {allCheckIns.length > 0 ? (
+                                  <div className="flex flex-col space-y-1">
+                                    {allCheckIns.map((entry, idx) => (
+                                      <span key={idx} className="text-green-600 font-medium">
+                                        {formatTime(entry.time)}
+                                        <span className="text-xs ml-1 text-gray-500">
+                                          ({entry.method === 'face' ? 'Face' : entry.method === 'rfid' ? 'RFID' : entry.method})
+                                        </span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">--:-- --</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {allCheckOuts.length > 0 ? (
+                                  <div className="flex flex-col space-y-1">
+                                    {allCheckOuts.map((entry, idx) => (
+                                      <span key={idx} className="text-red-600 font-medium">
+                                        {formatTime(entry.time)}
+                                        <span className="text-xs ml-1 text-gray-500">
+                                          ({entry.method === 'face' ? 'Face' : entry.method === 'rfid' ? 'RFID' : entry.method})
+                                        </span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">--:-- --</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {dailyDuration}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-wrap gap-1">
+                                  {Array.from(allMethods).map(method => (
+                                    <span key={method} className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                      method === 'face' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : method === 'rfid' 
+                                          ? 'bg-blue-100 text-blue-800' 
+                                          : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {method === 'face' ? 'Face' : method === 'rfid' ? 'RFID' : method}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -634,7 +968,10 @@ const WorkerAttendance = () => {
                       playsInline 
                       className="w-full rounded-lg border-2 border-gray-300 max-h-64"
                     />
-                    <canvas ref={canvasRef} className="hidden" />
+                    <canvas 
+                      ref={canvasRef} 
+                      className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                    />
                   </div>
                   <p className="text-sm text-gray-600">
                     Position your face in the frame
@@ -651,12 +988,19 @@ const WorkerAttendance = () => {
                       playsInline 
                       className="w-full rounded-lg border-2 border-green-500 max-h-64"
                     />
-                    <canvas ref={canvasRef} className="hidden" />
-                    <div className="absolute inset-0 border-4 border-green-500 rounded-lg animate-pulse"></div>
+                    <canvas 
+                      ref={canvasRef} 
+                      className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                    />
                   </div>
                   <p className="text-sm text-gray-600">
-                    Detecting face...
+                    Position your face within the frame
                   </p>
+                  {faceError && (
+                    <p className="text-sm text-red-600 mt-2">
+                      {faceError}
+                    </p>
+                  )}
                 </div>
               )}
               
@@ -686,6 +1030,21 @@ const WorkerAttendance = () => {
                   >
                     Try Again
                   </button>
+                </div>
+              )}
+              
+              {faceDetectionStatus === 'cooldown' && (
+                <div className="text-center py-8">
+                  <div className="mx-auto bg-yellow-100 rounded-full p-3 w-16 h-16 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                  <p className="text-gray-600 mb-4">Cooldown in effect</p>
+                  <p className="text-sm text-gray-500">Please wait before attempting to punch again</p>
+                  <div className="mt-4 text-lg font-semibold text-yellow-700">
+                    {cooldownRemainingTime > 0 && `Time remaining: ${cooldownRemainingTime}s`}
+                  </div>
                 </div>
               )}
             </div>

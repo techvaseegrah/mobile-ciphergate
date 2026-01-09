@@ -165,13 +165,15 @@ const Inventory = () => {
     try {
       // Prepare data for submission
       let submitData = {
-        ...formData,
         name: formData.name.trim(),
         sku: formData.sku.trim(),
+        category: formData.category,
         stock: Number(formData.stock) || 0,
         min_stock_alert: Number(formData.min_stock_alert) || 0,
         cost_price: Number(formData.cost_price) || 0,
-        selling_price: Number(formData.selling_price) || 0
+        selling_price: Number(formData.selling_price) || 0,
+        location: formData.location,
+        supplier: formData.supplier
       };
       
       // Remove empty fields to avoid validation errors
@@ -182,6 +184,11 @@ const Inventory = () => {
       // Remove supplier field if it's empty (to avoid validation errors)
       if (!submitData.supplier || submitData.supplier === '') {
         delete submitData.supplier;
+      }
+      
+      // Remove location field if it's empty
+      if (!submitData.location || submitData.location === '') {
+        delete submitData.location;
       }
       
       if (isEditing) {
@@ -417,6 +424,7 @@ const Inventory = () => {
                       />
                     </div>
                                           
+                    
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Supplier

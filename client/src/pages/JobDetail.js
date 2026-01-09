@@ -232,7 +232,7 @@ const JobDetail = () => {
         min_stock_alert: Number(newProductForm.min_stock_alert) || 5,
         cost_price: Number(newProductForm.cost_price) || 0,
         selling_price: Number(newProductForm.selling_price) || 0,
-        location: newProductForm.location,
+        location: newProductForm.location || undefined,
         supplier: newProductForm.supplier || undefined
       };
       
@@ -260,7 +260,8 @@ const JobDetail = () => {
         selling_price: '',
         stock: 1,
         min_stock_alert: 5,
-        location: ''
+        location: '',
+
       });
       
       // Close the modal
@@ -777,6 +778,55 @@ const JobDetail = () => {
               </tbody>
             </table>
           </div>
+          
+          <!-- Parts Used Table -->
+          ${job.parts_used && job.parts_used.length > 0 ? `
+          <div style="margin-top: 10px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+              <thead>
+                <tr style="height: 30px;">
+                  <th style="border: 1px solid #000; text-align: left; padding: 5px;">Part Name</th>
+                  <th style="border: 1px solid #000; text-align: left; padding: 5px;">SKU</th>
+                  <th style="border: 1px solid #000; text-align: left; padding: 5px;">Color</th>
+                  <th style="border: 1px solid #000; text-align: right; padding: 5px;">Qty</th>
+                  <th style="border: 1px solid #000; text-align: right; padding: 5px;">Unit Price</th>
+                  <th style="border: 1px solid #000; text-align: right; padding: 5px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${job.parts_used.map(partUsed => {
+                  // Extract part data
+                  const partData = partUsed.part;
+                  let partName = 'N/A';
+                  let partSku = 'N/A';
+                  let partCostPrice = 0;
+                  let partColor = 'N/A';
+                  
+                  // Handle case where partData is a populated object
+                  if (partData && typeof partData === 'object') {
+                    if (partData.name) partName = partData.name;
+                    if (partData.sku) partSku = partData.sku;
+                    if (partData.cost_price !== undefined) partCostPrice = partData.cost_price;
+
+                  }
+                  
+                  const quantity = partUsed.quantity || 0;
+                  const unitCost = (partUsed.edited_cost !== undefined ? partUsed.edited_cost : partCostPrice) || 0;
+                  const totalCost = unitCost * quantity;
+                  
+                  return `
+                  <tr style="height: 25px;">
+                    <td style="border: 1px solid #000; padding: 3px; font-weight: bold;">${partName}</td>
+                    <td style="border: 1px solid #000; padding: 3px;">${partSku}</td>
+                    <td style="border: 1px solid #000; padding: 3px; text-align: right;">${quantity}</td>
+                    <td style="border: 1px solid #000; padding: 3px; text-align: right;">Rs ${unitCost.toFixed(2)}</td>
+                    <td style="border: 1px solid #000; padding: 3px; text-align: right;">Rs ${totalCost.toFixed(2)}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
           
           <!-- Discount Row -->
           <div style="border: 1px solid #000; padding: 5px 10px; font-size: 13px;">
