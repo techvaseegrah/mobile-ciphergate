@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.png';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     <>
       {/* Mobile menu button - only visible on mobile */}
       <button
-        className="sidebar-toggle fixed top-4 left-4 z-30 md:hidden bg-gray-800 text-white p-2 rounded-lg shadow-lg"
+        className="sidebar-toggle fixed top-4 left-4 z-30 md:hidden bg-slate-800 text-white p-2 rounded-lg shadow-lg"
         onClick={toggleSidebar}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -60,12 +61,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       
       {/* Sidebar - hidden by default on mobile */}
       <div 
-        className={`bg-gray-900 text-white w-64 h-screen fixed flex flex-col transform transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:fixed lg:z-auto lg:w-64 lg:inset-y-0`}>
+        className={`bg-gradient-to-b from-slate-900 to-indigo-900 text-white w-64 h-screen fixed flex flex-col transform transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:fixed lg:z-auto lg:w-64 lg:inset-y-0`}>
       
-        <div className="p-6 text-2xl font-bold border-b border-gray-700 flex justify-between items-center">
-          <div>Repair<span className="text-blue-500">Pro</span></div>
+        <div className="p-5 text-xl font-bold border-b border-gray-700 flex flex-col items-center">
+          <div className="flex justify-center mb-2">
+            <img src={logo} alt="Shreeramanamobiles Logo" className="h-16 w-16 object-contain rounded" />
+          </div>
+          <div className="text-center text-white">Shreerama<br /><span className="text-blue-400">mobiles</span></div>
           <button 
-            className="lg:hidden text-white p-1 rounded-md hover:bg-gray-700"
+            className="lg:hidden text-white p-1 rounded-md hover:bg-slate-700 mt-2"
             onClick={toggleSidebar}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -79,7 +83,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <li key={item.name}>
                 <Link 
                   to={item.path} 
-                  className="flex items-center p-3 hover:bg-gray-800 rounded transition"
+                  className="flex items-center p-3 rounded-lg transition-colors duration-200 hover:bg-slate-800 hover:text-blue-300"
                   onClick={() => {
                     if (window.innerWidth < 768) {
                       toggleSidebar();
@@ -93,10 +97,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             ))}
           </ul>
         </nav>
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-slate-700">
           <button
             onClick={handleLogoutClick}
-            className="w-full flex items-center p-3 text-left hover:bg-gray-800 rounded transition text-red-400 hover:text-red-300"
+            className="w-full flex items-center p-3 text-left rounded-lg transition-colors duration-200 hover:bg-slate-800 text-red-400 hover:text-red-300"
           >
             <span className="mr-3">🚪</span>
             Logout
@@ -115,15 +119,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div className="bg-slate-800 text-white rounded-lg shadow-xl w-full max-w-md mx-4 border border-slate-700">
+            <div className="border-b border-slate-700 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">
                 Confirm Logout
               </h3>
             </div>
             <div className="px-6 py-4">
               <div className="mb-6">
-                <p className="text-gray-700">
+                <p className="text-slate-300">
                   Are you sure you want to logout?
                 </p>
               </div>
@@ -131,7 +135,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={cancelLogout}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-slate-600 rounded-lg text-white hover:bg-slate-700 transition"
                 >
                   Cancel
                 </button>
