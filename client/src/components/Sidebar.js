@@ -61,7 +61,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       
       {/* Sidebar - hidden by default on mobile */}
       <div 
-        className={`bg-gradient-to-b from-slate-900 to-indigo-900 text-white w-64 h-screen fixed flex flex-col transform transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:fixed lg:z-auto lg:w-64 lg:inset-y-0`}>
+        className={`bg-gradient-to-b from-slate-900 to-indigo-900 text-white w-64 h-screen md:h-screen fixed flex flex-col transform transition-transform duration-300 ease-in-out z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:fixed lg:z-auto lg:w-64 lg:inset-y-0`} style={{minHeight: '100vh'}}>
       
         <div className="p-5 text-xl font-bold border-b border-gray-700 flex flex-col items-center">
           <div className="flex justify-center mb-2">
@@ -77,34 +77,36 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             </svg>
           </button>
         </div>
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="space-y-2">
-            {menuItems.map((item) => (
-              <li key={item.name}>
-                <Link 
-                  to={item.path} 
-                  className="flex items-center p-3 rounded-lg transition-colors duration-200 hover:bg-slate-800 hover:text-blue-300"
-                  onClick={() => {
-                    if (window.innerWidth < 768) {
-                      toggleSidebar();
-                    }
-                  }}
-                >
-                  <span className="mr-3">{item.icon}</span>
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="p-4 border-t border-slate-700">
-          <button
-            onClick={handleLogoutClick}
-            className="w-full flex items-center p-3 text-left rounded-lg transition-colors duration-200 hover:bg-slate-800 text-red-400 hover:text-red-300"
-          >
-            <span className="mr-3">🚪</span>
-            Logout
-          </button>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <nav className="flex-1 overflow-y-auto">
+            <ul className="space-y-2 p-4">
+              {menuItems.map((item) => (
+                <li key={item.name}>
+                  <Link 
+                    to={item.path} 
+                    className="flex items-center p-3 rounded-lg transition-colors duration-200 hover:bg-slate-800 hover:text-blue-300"
+                    onClick={() => {
+                      if (window.innerWidth < 768) {
+                        toggleSidebar();
+                      }
+                    }}
+                  >
+                    <span className="mr-3">{item.icon}</span>
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="p-4 border-t border-slate-700 bg-gradient-to-b from-slate-900 to-indigo-900">
+            <button
+              onClick={handleLogoutClick}
+              className="w-full flex items-center p-3 text-left rounded-lg transition-colors duration-200 hover:bg-slate-800 text-red-400 hover:text-red-300"
+            >
+              <span className="mr-3">🚪</span>
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 

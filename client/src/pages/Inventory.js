@@ -342,7 +342,7 @@ const Inventory = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen pb-20 md:pb-8">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Inventory Management</h1>
@@ -663,8 +663,8 @@ const Inventory = () => {
             {searchTerm ? 'No parts match your search.' : 'No parts found in inventory.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full divide-y divide-gray-200 min-w-max">
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -731,7 +731,8 @@ const Inventory = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          <div className="h-4"></div>
+        </div>
         )}
       </div>
     </div>

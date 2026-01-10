@@ -5,12 +5,14 @@ import logo from '../assets/logo.png';
 
 const EmployeeLogin = () => {
   const [workers, setWorkers] = useState([]);
+  const [filteredWorkers, setFilteredWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   // Fetch all workers
@@ -19,6 +21,7 @@ const EmployeeLogin = () => {
       try {
         const res = await api.get('/workers');
         setWorkers(res.data);
+        setFilteredWorkers(res.data); // Initialize filtered workers
       } catch (err) {
         console.error(err);
         setError('Failed to fetch workers');
@@ -27,6 +30,20 @@ const EmployeeLogin = () => {
 
     fetchWorkers();
   }, []);
+
+  // Filter workers based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredWorkers(workers);
+    } else {
+      const filtered = workers.filter(worker => 
+        worker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        worker.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (worker.department && worker.department.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredWorkers(filtered);
+    }
+  }, [searchTerm, workers]);
 
   const handleWorkerSelect = (worker) => {
     setSelectedWorker(worker);
@@ -96,21 +113,29 @@ const EmployeeLogin = () => {
               </div>
             )}
             
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Search employees by name, email, or department..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/20 border border-white/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white placeholder:text-white/60"
+              />
+            </div>
             <p className="text-blue-200 mb-4">Select an employee to login:</p>
-            {workers.length === 0 ? (
+            {filteredWorkers.length === 0 ? (
               <div className="text-center py-8 text-blue-200">
-                No employees found.
+                {workers.length === 0 ? 'No employees found.' : 'No matching employees found.'}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {workers.map((worker) => (
+                {filteredWorkers.map((worker) => (
                   <div 
                     key={worker._id}
                     className="bg-white/10 border border-white/20 rounded-xl p-4 hover:bg-white/20 cursor-pointer transition-all duration-300 transform hover:scale-[1.02]"
                     onClick={() => handleWorkerSelect(worker)}
                   >
                     <div className="flex items-center">
-                      <div className="bg-slate-200 border-2 border-dashed rounded-xl w-16 h-16" />
                       <div className="ml-4">
                         <h3 className="font-semibold text-white">{worker.name}</h3>
                         <p className="text-sm text-blue-200">{worker.email}</p>

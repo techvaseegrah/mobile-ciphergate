@@ -67,7 +67,6 @@ const EmployeeSidebar = ({ worker, onLogout, isOpen, toggleSidebar }) => {
         
         <div className="p-4 border-b border-slate-700">
           <div className="flex items-center">
-            <div className="bg-slate-200 border-2 border-dashed rounded-xl w-16 h-16" />
             <div className="ml-3">
               <p className="font-medium text-white">{worker?.name}</p>
               <p className="text-xs text-slate-400">{worker?.role}</p>
