@@ -52,7 +52,8 @@ const PartSchema = new Schema({
   min_stock_alert: { type: Number, default: 5 },
   cost_price: { type: Number },
   selling_price: { type: Number },
-  location: { type: String }
+  location: { type: String },
+  color: { type: String }
 }, {
   timestamps: true // Adds createdAt and updatedAt fields
 });

@@ -38,7 +38,8 @@ const Purchases = () => {
     selling_price: '',
     stock: 1,
     min_stock_alert: 5,
-    location: ''
+    location: '',
+    color: ''
   });
   const [formData, setFormData] = useState({
     supplier: filterSupplier || '',
@@ -222,7 +223,8 @@ const Purchases = () => {
         cost_price: Number(newProductForm.cost_price) || 0,
         selling_price: Number(newProductForm.selling_price) || 0,
         location: newProductForm.location,
-        supplier: newProductForm.supplier || undefined
+        supplier: newProductForm.supplier || undefined,
+        color: newProductForm.color
       };
       
       const response = await api.post('/inventory', submitData);
@@ -252,7 +254,8 @@ const Purchases = () => {
         selling_price: '',
         stock: 1,
         min_stock_alert: 5,
-        location: ''
+        location: '',
+        color: ''
       });
       
       // Close the modal after successful addition
@@ -306,7 +309,8 @@ const Purchases = () => {
       selling_price: '',
       stock: 1,
       min_stock_alert: 5,
-      location: ''
+      location: '',
+      color: ''
     });
   };
 
@@ -1769,6 +1773,20 @@ const Purchases = () => {
                     onChange={handleNewProductChange}
                     className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                     placeholder="Enter storage location"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <span className="mr-2">🎨</span> Color
+                  </label>
+                  <input
+                    type="text"
+                    name="color"
+                    value={newProductForm.color}
+                    onChange={handleNewProductChange}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="Enter color (e.g. Black, White, Red)"
                   />
                 </div>
               </div>

@@ -34,7 +34,8 @@ const JobDetail = () => {
     selling_price: '',
     stock: 1,
     min_stock_alert: 5,
-    location: ''
+    location: '',
+    color: ''
   });
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -199,7 +200,8 @@ const JobDetail = () => {
       selling_price: '',
       stock: 1,
       min_stock_alert: 5,
-      location: ''
+      location: '',
+      color: ''
     });
   };
   
@@ -233,7 +235,8 @@ const JobDetail = () => {
         cost_price: Number(newProductForm.cost_price) || 0,
         selling_price: Number(newProductForm.selling_price) || 0,
         location: newProductForm.location || undefined,
-        supplier: newProductForm.supplier || undefined
+        supplier: newProductForm.supplier || undefined,
+        color: newProductForm.color
       };
       
       const response = await api.post('/inventory', submitData);
@@ -261,7 +264,7 @@ const JobDetail = () => {
         stock: 1,
         min_stock_alert: 5,
         location: '',
-
+        color: ''
       });
       
       // Close the modal
@@ -967,7 +970,7 @@ const JobDetail = () => {
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen md:ml-64 flex items-center justify-center">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading job details...</div>
       </div>
     );
@@ -975,7 +978,7 @@ const JobDetail = () => {
 
   if (error) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen md:ml-64">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
@@ -985,7 +988,7 @@ const JobDetail = () => {
 
   if (!job) {
     return (
-      <div className="p-8 bg-gray-100 min-h-screen md:ml-64">
+      <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
           Job not found
         </div>
@@ -994,62 +997,62 @@ const JobDetail = () => {
   }
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen md:ml-64">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       {success && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
           {success}
         </div>
       )}
       
-      <div className="mb-6">
+      <div className="mb-4">
         <button 
           onClick={() => navigate('/jobs')}
-          className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          className="flex items-center text-blue-600 hover:text-blue-800 mb-2 text-sm"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
           </svg>
           Back to Jobs
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">Job Details</h1>
-        <p className="text-gray-600">Job ID: {job._id}</p>
-        <p className="text-gray-600">Customer Phone: {job.customer?.phone || 'Not available'}</p>
+        <h1 className="text-2xl font-bold text-gray-900">Job Details</h1>
+        <p className="text-gray-600 text-sm">Job ID: {job._id}</p>
+        <p className="text-gray-600 text-sm">Customer Phone: {job.customer?.phone || 'Not available'}</p>
       </div>
 
       {/* Customer Image Section */}
       {job.customer_photo && (
-        <div className="bg-white rounded-lg shadow mb-6 p-6 flex flex-col items-center">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Customer Photo</h2>
+        <div className="bg-white rounded-lg shadow mb-6 p-4 flex flex-col items-center">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">Customer Photo</h2>
           <img 
             src={job.customer_photo} 
             alt="Customer" 
-            className="w-32 h-32 object-cover rounded-full border-4 border-gray-200"
+            className="w-24 h-24 object-cover rounded-full border-4 border-gray-200"
           />
         </div>
       )}
       
       {/* Action Buttons */}
-      <div className="bg-white rounded-lg shadow mb-6 p-6">
-        <div className="flex flex-wrap gap-4">
+      <div className="bg-white rounded-lg shadow mb-6 p-4">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={downloadPDF}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+            className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center text-sm"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            Download PDF
+            PDF
           </button>
           
           {job.device_video && (
             <button 
               onClick={() => setShowVideo(!showVideo)}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center"
+              className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center text-sm"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
               </svg>
-              {showVideo ? 'Hide Device Video' : 'View Device Video'}
+              {showVideo ? 'Hide' : 'View'}
             </button>
           )}
           
@@ -1057,11 +1060,11 @@ const JobDetail = () => {
             <button 
               onClick={resendWhatsAppNotification}
               disabled={sendingWhatsApp || !job.customer?.phone}
-              className={`px-4 py-2 text-white rounded flex items-center ${sendingWhatsApp ? 'bg-gray-400' : 'bg-purple-600 hover:bg-purple-700'} ${!job.customer?.phone ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`px-3 py-2 text-white rounded flex items-center text-sm ${sendingWhatsApp ? 'bg-gray-400' : 'bg-purple-600 hover:bg-purple-700'} ${!job.customer?.phone ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {sendingWhatsApp ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -1069,10 +1072,10 @@ const JobDetail = () => {
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                   </svg>
-                  Resend WhatsApp
+                  WhatsApp
                 </>
               )}
             </button>
@@ -1082,11 +1085,11 @@ const JobDetail = () => {
             <button 
               onClick={markAsCompleted}
               disabled={updating || sendingWhatsApp}
-              className={`px-4 py-2 text-white rounded flex items-center ${(updating || sendingWhatsApp) ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
+              className={`px-3 py-2 text-white rounded flex items-center text-sm ${(updating || sendingWhatsApp) ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
             >
               {(updating || sendingWhatsApp) ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -1094,10 +1097,10 @@ const JobDetail = () => {
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
-                  Mark as Completed
+                  Complete
                 </>
               )}
             </button>
@@ -1106,12 +1109,12 @@ const JobDetail = () => {
           {job.status !== 'Done' && job.status !== 'Picked Up' && job.status !== 'Cancelled' && (
             <button 
               onClick={() => setShowCancelModal(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded flex items-center hover:bg-red-700"
+              className="px-3 py-2 bg-red-600 text-white rounded flex items-center hover:bg-red-700 text-sm"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
               </svg>
-              Cancel Job
+              Cancel
             </button>
           )}
         </div>
@@ -1130,17 +1133,17 @@ const JobDetail = () => {
       </div>
       
       <div className="bg-white rounded-lg shadow mb-8">
-        <div className="border-b border-gray-200 p-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-800">Job Information</h2>
+        <div className="border-b border-gray-200 p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-800">Job Information</h2>
             <span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${getStatusColor(job.status)}`}>
               {job.status}
             </span>
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Information</h3>
               <div className="space-y-3">
                 <div>
@@ -1162,7 +1165,7 @@ const JobDetail = () => {
               </div>
             </div>
             
-            <div>
+            <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Device Information</h3>
               <div className="space-y-3">
                 <div>
@@ -1184,7 +1187,7 @@ const JobDetail = () => {
               </div>
             </div>
             
-            <div>
+            <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Service Details</h3>
               <div className="space-y-3">
                 <div>
@@ -1206,7 +1209,7 @@ const JobDetail = () => {
               </div>
             </div>
             
-            <div>
+            <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Financials</h3>
               <div className="space-y-3">
                 <div>
@@ -1298,14 +1301,14 @@ const JobDetail = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow mb-8">
-        <div className="border-b border-gray-200 p-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-800">Parts Used</h2>
+        <div className="border-b border-gray-200 p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-800">Parts Used</h2>
             <button 
               onClick={() => setShowPartsModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+              className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center text-sm"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
               Add Part
@@ -1315,16 +1318,16 @@ const JobDetail = () => {
         
         {job.parts_used && job.parts_used.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price Type</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Cost</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Name</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">SKU</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Type</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Cost</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1367,25 +1370,25 @@ const JobDetail = () => {
                   
                   return (
                     <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{partName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{partSku}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{quantity}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{part.price_type || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 truncate max-w-[100px]">{partName}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">{partSku}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{quantity}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">{part.price_type || 'N/A'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                         <input
                           type="number"
                           min="0"
                           step="0.01"
                           value={displayUnitCost}
                           onChange={(e) => handlePartCostChange(index, e.target.value)}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-right text-sm"
                         />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Rs {totalCost.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">Rs {totalCost.toFixed(2)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                         <button 
                           onClick={() => removePartFromJob(index)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 text-sm"
                         >
                           Remove
                         </button>
@@ -1397,22 +1400,22 @@ const JobDetail = () => {
             </table>
             
             {/* Revenue Calculation */}
-            <div className="p-6 border-t border-gray-200">
+            <div className="p-4 border-t border-gray-200">
               <div className="flex justify-end">
-                <div className="w-64">
-                  <div className="flex justify-between py-2">
+                <div className="w-full max-w-xs">
+                  <div className="flex justify-between py-1 text-sm">
                     <span className="font-medium">Parts Cost:</span>
                     <span>Rs {calculatePartsCost().toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between py-2">
+                  <div className="flex justify-between py-1 text-sm">
                     <span className="font-medium">Service Charges:</span>
                     <span>Rs {(job.service_charges || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between py-2 border-t border-gray-300">
+                  <div className="flex justify-between py-1 border-t border-gray-300 text-sm">
                     <span className="font-bold">Total Cost:</span>
                     <span className="font-bold">Rs {(calculatePartsCost() + (job.service_charges || 0)).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between py-2">
+                  <div className="flex justify-between py-1 text-sm">
                     <span className="font-medium">Final Price:</span>
                     <span>Rs {(job.final_customer_price || job.total_amount || 0).toFixed(2)}</span>
                   </div>
@@ -1421,13 +1424,13 @@ const JobDetail = () => {
                       <button 
                         onClick={saveEditedPartCosts}
                         disabled={updating}
-                        className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`px-3 py-1 bg-green-600 text-white rounded text-sm ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        {updating ? 'Saving...' : 'Save Cost Changes'}
+                        {updating ? 'Saving...' : 'Save Changes'}
                       </button>
                     </div>
                   )}
-                  <div className="flex justify-between py-2 border-t border-gray-300 bg-green-50 p-2 rounded">
+                  <div className="flex justify-between py-2 border-t border-gray-300 bg-green-50 p-2 rounded text-sm">
                     <span className="font-bold">Revenue:</span>
                     <span className="font-bold text-green-600">Rs {Math.max(0, (job.final_customer_price || job.total_amount || 0) - calculatePartsCost() - (job.service_charges || 0)).toFixed(2)}</span>
                   </div>
@@ -1443,11 +1446,11 @@ const JobDetail = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-800">Service Notes</h2>
+        <div className="border-b border-gray-200 p-4">
+          <h2 className="text-lg font-semibold text-gray-800">Service Notes</h2>
         </div>
-        <div className="p-6">
-          <p className="text-gray-700">{job.service_notes || 'No service notes available.'}</p>
+        <div className="p-4">
+          <p className="text-gray-700 text-sm">{job.service_notes || 'No service notes available.'}</p>
         </div>
       </div>
       
@@ -1721,6 +1724,20 @@ const JobDetail = () => {
                     onChange={handleNewProductChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g. Shelf A, Bin 5"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <span className="mr-1">🎨</span> Color
+                  </label>
+                  <input
+                    type="text"
+                    name="color"
+                    value={newProductForm.color}
+                    onChange={handleNewProductChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter color (e.g. Black, White, Red)"
                   />
                 </div>
               </div>

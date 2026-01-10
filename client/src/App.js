@@ -90,7 +90,7 @@ function AppContent() {
     <div className="flex min-h-screen bg-gray-100">
       <ConditionalSidebar location={location} isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
-      <div className={`flex-1 transition-all duration-300 ${location.pathname.startsWith('/employee/') ? '' : 'lg:ml-64'}`}>
+      <div className={`flex-1 transition-all duration-300 ${location.pathname === '/' || location.pathname === '/admin/login' || location.pathname === '/employee/login' || location.pathname.startsWith('/employee/') ? '' : 'lg:ml-64'}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin/login" element={<AdminLogin />} />

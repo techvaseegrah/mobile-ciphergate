@@ -244,13 +244,13 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Settings</h1>
         
         {/* Location Settings Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">Location Settings</h2>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-700 mb-4">Location Settings</h2>
           
           <form onSubmit={handleSaveLocationSettings}>
             <div className="mb-4">
@@ -262,16 +262,16 @@ const Settings = () => {
                   onChange={handleLocationChange}
                   className="rounded text-blue-600"
                 />
-                <span className="ml-2 text-gray-700">Enable Location Restriction</span>
+                <span className="ml-2 text-gray-700 text-sm sm:text-base">Enable Location Restriction</span>
               </label>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 When enabled, workers can only mark attendance when within the specified location
               </p>
             </div>
             
             {locationSettings.enabled && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div className="grid grid-cols-1 gap-4 mb-4">
                   <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="latitude">
                       Latitude
@@ -283,7 +283,7 @@ const Settings = () => {
                       value={locationSettings.latitude}
                       onChange={handleLocationChange}
                       step="any"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       required
                     />
                   </div>
@@ -299,13 +299,13 @@ const Settings = () => {
                       value={locationSettings.longitude}
                       onChange={handleLocationChange}
                       step="any"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       required
                     />
                   </div>
                 </div>
                 
-                <div className="mb-6">
+                <div className="mb-4">
                   <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="radius">
                     Radius (meters)
                   </label>
@@ -317,36 +317,36 @@ const Settings = () => {
                     onChange={handleLocationChange}
                     min="10"
                     max="1000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     required
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
                     Recommended range: 50-1000 meters. Workers must be within this radius to mark attendance.
                   </p>
                 </div>
                 
-                <div className="mb-6">
+                <div className="mb-4">
                   <button
                     type="button"
                     onClick={getCurrentLocation}
                     disabled={isGettingLocation}
-                    className={`bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition ${
+                    className={`bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded focus:outline-none focus:shadow-outline transition text-xs sm:text-sm ${
                       isGettingLocation ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
                     {isGettingLocation ? 'Getting Location...' : 'Capture Current Location'}
                   </button>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
                     Click to automatically fill in your current location coordinates
                   </p>
                 </div>
               </>
             )}
             
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline transition"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-4 sm:py-2 sm:px-6 rounded focus:outline-none focus:shadow-outline transition text-sm"
               >
                 Save Location Settings
               </button>
@@ -355,12 +355,12 @@ const Settings = () => {
         </div>
         
         {/* Batch Management Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-700">Batch Management</h2>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-700">Batch Management</h2>
             <button
               onClick={handleAddNewBatch}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded focus:outline-none focus:shadow-outline transition text-sm"
             >
               Add New Batch
             </button>
@@ -370,40 +370,40 @@ const Settings = () => {
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white">
               <thead>
-                <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                  <th className="py-3 px-6 text-left">Batch Name</th>
-                  <th className="py-3 px-6 text-left">Working Hours</th>
-                  <th className="py-3 px-6 text-left">Lunch Time</th>
-                  <th className="py-3 px-6 text-left">Break Time</th>
-                  <th className="py-3 px-6 text-left">Actions</th>
+                <tr className="bg-gray-100 text-gray-600 uppercase text-xs sm:text-sm leading-normal">
+                  <th className="py-2 px-3 sm:py-3 sm:px-6 text-left">Batch Name</th>
+                  <th className="py-2 px-3 sm:py-3 sm:px-6 text-left">Working Hours</th>
+                  <th className="py-2 px-3 sm:py-3 sm:px-6 text-left hidden md:table-cell">Lunch Time</th>
+                  <th className="py-2 px-3 sm:py-3 sm:px-6 text-left hidden md:table-cell">Break Time</th>
+                  <th className="py-2 px-3 sm:py-3 sm:px-6 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-600 text-sm">
+              <tbody className="text-gray-600 text-xs sm:text-sm">
                 {batches.map(batch => (
                   <tr key={batch.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-3 px-6">{batch.name}</td>
-                    <td className="py-3 px-6">{batch.workingTime.from} - {batch.workingTime.to}</td>
-                    <td className="py-3 px-6">
+                    <td className="py-2 px-3 sm:py-3 sm:px-6">{batch.name}</td>
+                    <td className="py-2 px-3 sm:py-3 sm:px-6">{batch.workingTime.from} - {batch.workingTime.to}</td>
+                    <td className="py-2 px-3 sm:py-3 sm:px-6 hidden md:table-cell">
                       {batch.lunchTime.enabled 
                         ? `${batch.lunchTime.from} - ${batch.lunchTime.to}` 
                         : 'Disabled'}
                     </td>
-                    <td className="py-3 px-6">
+                    <td className="py-2 px-3 sm:py-3 sm:px-6 hidden md:table-cell">
                       {batch.breakTime.enabled 
                         ? `${batch.breakTime.from} - ${batch.breakTime.to}` 
                         : 'Disabled'}
                     </td>
-                    <td className="py-3 px-6">
+                    <td className="py-2 px-3 sm:py-3 sm:px-6">
                       <div className="flex item-center gap-2">
                         <button
                           onClick={() => handleEditBatch(batch)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-600 hover:text-blue-900 text-xs sm:text-sm"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => confirmDeleteBatch(batch)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 text-xs sm:text-sm"
                         >
                           Delete
                         </button>
@@ -419,18 +419,18 @@ const Settings = () => {
 
       {/* Modal for Adding/Editing Batch */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="border-b px-6 py-4">
-              <h3 className="text-xl font-semibold text-gray-800">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm sm:max-w-md md:max-w-lg">
+            <div className="border-b px-4 py-3">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
                 {currentBatch.id ? 'Edit Batch' : 'Add New Batch'}
               </h3>
             </div>
             
             <form onSubmit={handleSubmit}>
-              <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
+              <div className="px-4 py-3 max-h-[70vh] overflow-y-auto">
+                <div className="mb-3">
+                  <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="name">
                     Batch Name
                   </label>
                   <input
@@ -439,17 +439,17 @@ const Settings = () => {
                     name="name"
                     value={currentBatch.name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     required
                   />
                 </div>
                 
                 {/* Working Time */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-medium text-gray-700 mb-3">Working Time</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="mb-4">
+                  <h4 className="text-base sm:text-lg font-medium text-gray-700 mb-2">Working Time</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="workingTime.from">
+                      <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="workingTime.from">
                         From
                       </label>
                       <input
@@ -458,12 +458,12 @@ const Settings = () => {
                         name="workingTime.from"
                         value={currentBatch.workingTime.from}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="workingTime.to">
+                      <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="workingTime.to">
                         To
                       </label>
                       <input
@@ -472,7 +472,7 @@ const Settings = () => {
                         name="workingTime.to"
                         value={currentBatch.workingTime.to}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         required
                       />
                     </div>
@@ -480,9 +480,9 @@ const Settings = () => {
                 </div>
                 
                 {/* Lunch Time */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-medium text-gray-700">Lunch Time</h4>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-base sm:text-lg font-medium text-gray-700">Lunch Time</h4>
                     <label className="inline-flex items-center">
                       <input
                         type="checkbox"
@@ -490,14 +490,14 @@ const Settings = () => {
                         onChange={() => handleToggle('lunchTime')}
                         className="rounded text-blue-600"
                       />
-                      <span className="ml-2 text-gray-700">Enable</span>
+                      <span className="ml-2 text-gray-700 text-sm">Enable</span>
                     </label>
                   </div>
                   
                   {currentBatch.lunchTime.enabled && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lunchTime.from">
+                        <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="lunchTime.from">
                           From
                         </label>
                         <input
@@ -506,11 +506,11 @@ const Settings = () => {
                           name="lunchTime.from"
                           value={currentBatch.lunchTime.from}
                           onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lunchTime.to">
+                        <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="lunchTime.to">
                           To
                         </label>
                         <input
@@ -519,7 +519,7 @@ const Settings = () => {
                           name="lunchTime.to"
                           value={currentBatch.lunchTime.to}
                           onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                       </div>
                     </div>
@@ -527,9 +527,9 @@ const Settings = () => {
                 </div>
                 
                 {/* Break Time */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-medium text-gray-700">Break Time</h4>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-base sm:text-lg font-medium text-gray-700">Break Time</h4>
                     <label className="inline-flex items-center">
                       <input
                         type="checkbox"
@@ -537,14 +537,14 @@ const Settings = () => {
                         onChange={() => handleToggle('breakTime')}
                         className="rounded text-blue-600"
                       />
-                      <span className="ml-2 text-gray-700">Enable</span>
+                      <span className="ml-2 text-gray-700 text-sm">Enable</span>
                     </label>
                   </div>
                   
                   {currentBatch.breakTime.enabled && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="breakTime.from">
+                        <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="breakTime.from">
                           From
                         </label>
                         <input
@@ -553,11 +553,11 @@ const Settings = () => {
                           name="breakTime.from"
                           value={currentBatch.breakTime.from}
                           onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="breakTime.to">
+                        <label className="block text-gray-700 text-sm font-bold mb-1" htmlFor="breakTime.to">
                           To
                         </label>
                         <input
@@ -566,7 +566,7 @@ const Settings = () => {
                           name="breakTime.to"
                           value={currentBatch.breakTime.to}
                           onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-2 py-1.5 sm:px-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                       </div>
                     </div>
@@ -574,17 +574,17 @@ const Settings = () => {
                 </div>
               </div>
               
-              <div className="border-t px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <div className="border-t px-4 py-3 bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-md transition"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 text-gray-600 hover:text-gray-800 font-medium rounded-md transition text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline transition"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-6 rounded focus:outline-none focus:shadow-outline transition text-sm"
                 >
                   {currentBatch.id ? 'Update Batch' : 'Add Batch'}
                 </button>
@@ -596,30 +596,30 @@ const Settings = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="border-b px-6 py-4">
-              <h3 className="text-xl font-semibold text-gray-800">Confirm Delete</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
+            <div className="border-b px-4 py-3">
+              <h3 className="text-lg font-semibold text-gray-800">Confirm Delete</h3>
             </div>
             
-            <div className="px-6 py-4">
-              <p className="text-gray-700">
+            <div className="px-4 py-3">
+              <p className="text-gray-700 text-sm">
                 Are you sure you want to delete this batch <strong>"{batchToDelete?.name}"</strong>? 
                 This action cannot be undone.
               </p>
             </div>
             
-            <div className="border-t px-6 py-4 bg-gray-50 flex justify-end gap-3">
+            <div className="border-t px-4 py-3 bg-gray-50 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={closeDeleteConfirm}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-md transition"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 text-gray-600 hover:text-gray-800 font-medium rounded-md transition text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteBatch}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline transition"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-6 rounded focus:outline-none focus:shadow-outline transition text-sm"
               >
                 Delete
               </button>
